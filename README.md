@@ -1,4 +1,6 @@
 jack_mackerel
 =============
 
-Repository for joint jack mackerel model
+Repository for the SPRFMO joint jack mackerel model
+
+
