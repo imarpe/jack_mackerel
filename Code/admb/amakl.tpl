@@ -287,7 +287,7 @@ DATA_SECTION
   !! log_input(wt_pop);
   init_vector maturity(1,nages)
   !! log_input(maturity);
-  !! if (max(maturity)>.9) maturity /=2.;
+  // !! if (max(maturity)>.9) maturity /=2.;
   vector wt_mature(1,nages);
   !! wt_mature = elem_prod(wt_pop,maturity) ;
 
@@ -1574,7 +1574,7 @@ FUNCTION Get_Age2length
   // cout<<P_age2len<<endl;exit(1);
 
 FUNCTION dvar_matrix ALK2(dvar_vector& mu, dvar_vector& sig, dvector& x)
-	RETURN_ARRAYS_INCREMENT();
+	//RETURN_ARRAYS_INCREMENT();
 	int i, j;
 	dvariable z1;
 	dvariable z2;
@@ -1595,7 +1595,7 @@ FUNCTION dvar_matrix ALK2(dvar_vector& mu, dvar_vector& sig, dvector& x)
 		}//end nbins
 		pdf(i)/=sum(pdf(i));
 	}//end nage
-	RETURN_ARRAYS_DECREMENT();
+	//RETURN_ARRAYS_DECREMENT();
 	return(pdf);
 
 //---------------------------------------------------------------------------

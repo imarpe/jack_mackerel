@@ -44,6 +44,7 @@
 //     sel_ch indicates time-varying selectivity change
 //  
 //    Add bit for historical F
+//    Added length part for selectivity
 //
 //////////////////////////////////////////////////////////////////////////////
  // To ADD/FIX:
@@ -120,25 +121,28 @@ DATA_SECTION
   init_int endyr
   init_int rec_age
   init_int oldest_age
+  !! log_input(styr);
+  !! log_input(endyr);
+  !! log_input(rec_age);
+  !! log_input(oldest_age);
 
 //------------LENGTH INTERVALS
-  init_int stlength
-  init_int lastlength
-  init_int binlength
   init_int nlength
+  init_vector len_bins(1,nlength)
+  !! log_input(nlength);
+  !! log_input(len_bins);
 
-//------------------------------
   int nages
   !!  nages = oldest_age - rec_age + 1;
   int styr_rec
   int styr_sp
   int endyr_sp
   int nyrs
+  !! nyrs          = endyr - styr + 1;
   int mc_count;
   !!  mc_count=0;
-  !! nyrs = endyr - styr + 1;
   !! styr_rec = (styr - nages) + 1;     // First year of recruitment
-  !! styr_sp  = styr_rec - rec_age ;  // First year of spawning biomass  
+  !! styr_sp  = styr_rec - rec_age - 1 ;    // First year of spawning biomass  
   vector yy(styr,endyr);
   !! yy.fill_seqadd(styr,1) ;
   vector aa(1,nages);
@@ -249,16 +253,35 @@ DATA_SECTION
   vector              ac(1,nind);
 
   init_ivector nyrs_ind_age(1,nind)               //Number of years of index value (annual)
-  init_matrix yrs_ind_age_in(1,nind,1,nyrs_ind_age)  //Years of index value (annual)
-  init_matrix n_sample_ind_age_in(1,nind,1,nyrs_ind_age)         //Years of index value (annual)
-  init_3darray oac_ind_in(1,nind,1,nyrs_ind_age,1,nages)  //values of Index proportions at age
+  !! log_input(nyrs_ind_age);
 
+  init_ivector nyrs_ind_length(1,nfsh)
+  !! log_input(nyrs_ind_length);
+
+  init_imatrix yrs_ind_age_in(1,nind,1,nyrs_ind_age)  //Years of index value (annual)
+  !! log_input(yrs_ind_age_in);
+
+  init_imatrix yrs_ind_length_in(1,nind,1,nyrs_ind_length)
+  !! log_input(yrs_ind_length_in);
+
+  init_matrix n_sample_ind_age_in(1,nind,1,nyrs_ind_age)         //Years of index value (annual)
+  !! log_input(yrs_ind_age_in);
+
+  init_matrix n_sample_ind_length_in(1,nind,1,nyrs_ind_length)         //Years of index lengths (annual)
+  !! log_input(n_sample_ind_length_in);
+
+  init_3darray oac_ind_in(1,nind,1,nyrs_ind_age,1,nages)  //values of Index proportions at age
+  init_3darray olc_ind_in(1,nind,1,nyrs_ind_length,1,nlength)
+  !! log_input(olc_ind_in);
+
+
+  !! log_input(oac_ind_in);
   init_3darray  wt_ind(1,nind,styr,endyr,1,nages)      //values of Index proportions at age
   !! log_input(wt_ind);
 
   vector age_vector(1,nages);
-    !! for (j=1;j<=nages;j++)
-      !!  age_vector(j) = double(j+rec_age-1);
+  !! for (j=1;j<=nages;j++)
+  !!  age_vector(j) = double(j+rec_age-1);
   init_vector wt_pop(1,nages)
   !! log_input(wt_pop);
   init_vector maturity(1,nages)
@@ -328,6 +351,7 @@ DATA_SECTION
   number log_Linfprior
   !! log_Linfprior = log(Linfprior);
   !! log_input(Linfprior)
+  !! log_input(cvLinfprior)
 
   init_number kprior
   init_number cvkprior
@@ -335,6 +359,7 @@ DATA_SECTION
   number log_kprior
   !! log_kprior = log(kprior);
   !! log_input(kprior)
+  !! log_input(cvkprior)
 
   init_number Loprior
   init_number cvLoprior
@@ -342,6 +367,7 @@ DATA_SECTION
   number log_Loprior
   !! log_Loprior = log(Loprior);
   !! log_input(Loprior)
+  !! log_input(cvLoprior)
 
   init_number sdageprior
   init_number cvsdageprior
@@ -349,28 +375,49 @@ DATA_SECTION
   number log_sdageprior
   !! log_sdageprior = log(sdageprior);
   !! log_input(sdageprior)
+  !! log_input(cvsdageprior)
 
 //---------------------------------------------------------------------------
+  // Basic M
   init_number natmortprior
-  !! log_input(natmortprior);
   init_number cvnatmortprior
-  !! log_input(cvnatmortprior);
   init_int    phase_M
+  !! log_input(natmortprior);
+  !! log_input(cvnatmortprior);
   !! log_input(phase_M);
+
+  // age-specific M
+  init_int     npars_Mage
+  init_ivector ages_M_changes(1,npars_Mage)
+  init_vector  Mage_in(1,npars_Mage)
+  init_int     phase_Mage
+  vector       Mage_offset_in(1,npars_Mage)
+  // convert inputs to offsets from prior for initialization purposes
+  !! if (npars_Mage>0) Mage_offset_in = log(Mage_in / natmortprior);
+  !! log_input(npars_Mage);
+  !! log_input(ages_M_changes);
+  !! log_input(Mage_in);
+  !! log_input(Mage_offset_in);
+
+  // time-varying M
   init_int    phase_rw_M
   init_int npars_rw_M
   init_ivector  yrs_rw_M(1,npars_rw_M);
   init_vector sigma_rw_M(1,npars_rw_M)
  LOCAL_CALCS
+  log_input(phase_rw_M);
   log_input(npars_rw_M);
   log_input(yrs_rw_M);
-  log_input(phase_rw_M);
   log_input(sigma_rw_M);
  END_CALCS
+
   init_vector qprior(1,nind)      
   vector log_qprior(1,nind)      
   init_vector cvqprior(1,nind)     
   init_ivector phase_q(1,nind)
+  !! log_input(qprior);
+  !! log_input(cvqprior);
+  !! log_input(phase_q);
 
   init_vector q_power_prior(1,nind)      
   vector log_q_power_prior(1,nind)      
@@ -654,26 +701,24 @@ DATA_SECTION
         log_input(n_sel_ch_ind(k));
         log_input(yrs_sel_ch_ind(k)(1,n_sel_ch_ind(k)));
         // This to read in pre-specified selectivity values...
-        sel_ind_tmp.initialize();
-        log_selcoffs_ind_in.initialize();
         for (j=1;j<=nages;j++) 
           *(ad_comm::global_datafile) >> sel_ind_tmp(j);  
         log_input(sel_ind_tmp);
+        log_selcoffs_ind_in(k,1)(1,nselages_in_ind(k)) = log((sel_ind_tmp(1,nselages_in_ind(k))+1e-7)/mean(sel_fsh_tmp(1,nselages_in_ind(k))+1e-7) );
         // set all change selectivity to initial values
         for (int jj=2;jj<=n_sel_ch_ind(k);jj++) 
         {
-          for (int j=nselages_in_ind(k)+1;j<=nages;j++) 
+          for (int j=nselages_in_ind(k)+1;j<=nages;j++) // This might be going out of nages=nselages
           {
             sel_ind_tmp(j)  = sel_ind_tmp(nselages_in_ind(k));  
           }
           // Set tmp to actual initial vectors...
-          log_selcoffs_ind_in(k,jj)(1,nselages_in_ind(k)) = log((sel_ind_tmp(1,nselages_in_ind(k))+1e-7)/
-                                                            mean(sel_ind_tmp(1,nselages_in_ind(k))+1e-7) );
+          log_selcoffs_ind_in(k,jj)(1,nselages_in_ind(k)) = log((sel_ind_tmp(1,nselages_in_ind(k))+1e-7)/mean(sel_fsh_tmp(1,nselages_in_ind(k))+1e-7) );
           write_input_log<<"Sel_in_ind "<< mfexp(log_selcoffs_ind_in(k,jj))<<endl;
         }
         phase_selcoff_ind(k) = phase_sel_ind(k);
         phase_logist_ind(k)  = -2;
-        phase_dlogist_ind(k)  = -1;
+        phase_dlogist_ind(k) = -1;
       }
       break;
       case 2 : // Single logistic
@@ -761,9 +806,9 @@ DATA_SECTION
   !! write_input_log << "# Phase for logistic indices  "<<phase_logist_ind<<endl;
   !! write_input_log << "# Phase for dble logistic ind "<<phase_dlogist_ind<<endl;
 
-  !! for (k=1;k<=nfsh;k++) if (phase_selcoff_fsh(k)>0) curv_pen_fsh(k) = 1./ (square(curv_pen_fsh(k))*2);
+  !! for (k=1;k<=nfsh;k++) if (phase_selcoff_fsh(k)>0) curv_pen_fsh(k) = 1./ (square(curv_pen_fsh(k))*2.);
   !! write_input_log<<"# Curv_pen_fsh: "<<endl<<curv_pen_fsh<<endl;
-  !! for (k=1;k<=nind;k++) if (phase_selcoff_ind(k)>0) curv_pen_ind(k) = 1./ (square(curv_pen_ind(k))*2);
+  !! for (k=1;k<=nind;k++) if (phase_selcoff_ind(k)>0) curv_pen_ind(k) = 1./ (square(curv_pen_ind(k))*2.);
   !! write_input_log<<"# Curv_pen_ind: "<<endl<<curv_pen_fsh<<endl;
 
   int  phase_fmort;
@@ -777,12 +822,13 @@ DATA_SECTION
  LOCAL_CALCS
   for (int k=1;k<=nfsh;k++) 
   {
-    if (nyrs_fsh_age(k) >0)
+    if ((endyr-retro)<=yrs_sel_ch_fsh(k,n_sel_ch_fsh(k))) n_sel_ch_fsh(k)-=retro ;  
+    for (int i=1;i<=retro;i++) 
     {
-      if ((endyr-retro)<=yrs_sel_ch_fsh(k,n_sel_ch_fsh(k))) n_sel_ch_fsh(k)-- ;  
-      for (int i=1;i<=retro;i++) 
+      cout<<"here"<<max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))<<endl;
+      if (max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))>=(endyr-retro)) 
       {
-        cout<<"Here "<<max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))<<endl;
+         nyrs_fsh_age(k) -= 1;
           if (max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))>=(endyr-retro)) 
              nyrs_fsh_age(k) -= 1;
       }
@@ -801,19 +847,15 @@ DATA_SECTION
   // now for indices
   for (int k=1;k<=nind;k++) 
   {
-    if (nyrs_ind(k) >0)
+    if ((endyr-retro)<=yrs_sel_ch_ind(k,n_sel_ch_ind(k))) n_sel_ch_ind(k)-=retro ;  
+    for (int i=1;i<=retro;i++) 
     {
-      if ((endyr-retro)<=yrs_sel_ch_ind(k,n_sel_ch_ind(k))) n_sel_ch_ind(k)-- ;  
-      for (int i=1;i<=retro;i++) 
-      {
-        // index values
-          if (max(yrs_ind_in(k)(1,nyrs_ind(k)))>=(endyr-retro)) 
-            nyrs_ind(k) -= 1;
-        // Ages (since they can be different than actual index years)
-        if (nyrs_ind_age(k) >0)
-          if (max(yrs_ind_age_in(k)(1,nyrs_ind_age(k)))>=(endyr-retro)) 
-            nyrs_ind_age(k) -= 1;
-      }
+      // index values
+      if (max(yrs_ind_in(k)(1,nyrs_ind(k)))>=(endyr-retro)) 
+        nyrs_ind(k) -= 1;
+      // Ages (since they can be different than actual index years)
+      if (max(yrs_ind_age_in(k)(1,nyrs_ind_age(k)))>=(endyr-retro)) 
+         nyrs_ind_age(k) -= 1;
     }
   }
   endyr_rec_est = endyr_rec_est - retro;
@@ -843,9 +885,13 @@ DATA_SECTION
   matrix obs_ind(1,nind,1,nyrs_ind)          //values of index value (annual)
   matrix obs_se_ind(1,nind,1,nyrs_ind)       //values of indices serrs
 
-  matrix yrs_ind_age(1,nind,1,nyrs_ind_age)  //Years of index value (annual)
+  imatrix yrs_ind_age(1,nind,1,nyrs_ind_age)  //Years of index value (annual)
+  imatrix yrs_ind_length(1,nind,1,nyrs_ind_length)
   matrix n_sample_ind_age(1,nind,1,nyrs_ind_age)         //Years of index value (annual)
+  matrix n_sample_ind_length(1,nind,1,nyrs_ind_length)    //Years of index index value (annual)
   3darray oac_ind(1,nind,1,nyrs_ind_age,1,nages)  //values of Index proportions at age
+  3darray olc_ind(1,nind,1,nyrs_ind_length,1,nlength)
+
   matrix     obs_lse_ind(1,nind,1,nyrs_ind) //Index standard errors (for lognormal)
   matrix     obs_lva_ind(1,nind,1,nyrs_ind) //Index standard errors (for lognormal)
  LOCAL_CALCS
@@ -866,7 +912,6 @@ DATA_SECTION
   catch_bio_lva = log(square(catch_bio_sd) + 1.);
   catch_bioT    = trans(catch_bio);
   catch_lastyr  = catch_bioT(endyr);
-  // cout<<catch_lastyr<<endl;exit(1);
   for (int k=1;k<=nind;k++)
   {
     yrs_ind(k)  = yrs_ind_in(k)(1,nyrs_ind(k));
@@ -875,18 +920,25 @@ DATA_SECTION
 
     yrs_ind_age(k) = yrs_ind_age_in(k)(1,nyrs_ind_age(k));
     n_sample_ind_age(k) = n_sample_ind_age_in(k)(1,nyrs_ind_age(k));
+    yrs_ind_length(k) = yrs_ind_length_in(k)(1,nyrs_ind_length(k));
+    n_sample_ind_length(k) = n_sample_ind_length_in(k)(1,nyrs_ind_length(k));
     for (int i=1;i<=nyrs_ind_age(k);i++)
       oac_ind(k,i) = oac_ind_in(k,i) ;
+    for (int i=1;i<=nyrs_ind_length(k);i++)
+      olc_ind(k,i) = olc_ind_in(k,i) ;
   }
+  log_input(nyrs_fsh_age);
   log_input(yrs_fsh_age);
   log_input(n_sample_fsh_age);
   log_input(oac_fsh);
+  log_input(olc_fsh);
   log_input(wt_fsh);
 
   log_input(nyrs_ind_age);
   log_input(yrs_ind_age);
   log_input(n_sample_ind_age);
   log_input(oac_ind);
+  log_input(olc_ind);
   obs_lse_ind = elem_div(obs_se_ind,obs_ind);
   obs_lse_ind = sqrt(log(square(obs_lse_ind) + 1.));
   log_input(obs_lse_ind);
@@ -934,6 +986,7 @@ DATA_SECTION
   vector offset_ind(1,nind)
   vector offset_fsh(1,nfsh)
   vector offset_lfsh(1,nfsh)
+  vector offset_lind(1,nind)
 
   int do_fmort;
   !! do_fmort=0;
@@ -951,6 +1004,7 @@ DATA_SECTION
   offset_ind.initialize();
   offset_fsh.initialize();
   offset_lfsh.initialize();
+  offset_lind.initialize();
   double sumtmp;
   for (k=1;k<=nfsh;k++)
     for (i=1;i<=nyrs_fsh_age(k);i++)
@@ -966,11 +1020,18 @@ DATA_SECTION
     }
 
   for (k=1;k<=nind;k++)
+  {
     for (i=1;i<=nyrs_ind_age(k);i++)
     {
       oac_ind(k,i) /= sum(oac_ind(k,i)); // Normalize to sum to one
       offset_ind(k) -= n_sample_ind_age(k,i)*(oac_ind(k,i) + 0.001) * log(oac_ind(k,i) + 0.001 ) ;
     }
+    for (i=1;i<=nyrs_ind_length(k);i++)
+    {
+      olc_ind(k,i) /= sum(olc_ind(k,i)); // Normalize to sum to one
+      offset_lind(k) -= n_sample_ind_length(k,i)*(olc_ind(k,i) + 0.001) * log(olc_ind(k,i) + 0.001 ) ;
+    }
+  }
   log_input(offset_fsh); 
   log_input(offset_ind); 
 
@@ -996,12 +1057,14 @@ DATA_SECTION
    write_input_log << "R_guess "<<endl;
    write_input_log << R_guess <<endl;
  END_CALCS
- vector len_bins(1,nlength)
- !! len_bins.fill_seqadd(stlength,binlength);
+ // vector len_bins(1,nlength)
+ // !! len_bins.fill_seqadd(stlength,binlength);
 
 PARAMETER_SECTION
  // Biological Parameters
-  init_bounded_number M(.02,.8,phase_M)
+  init_bounded_number Mest(.02,4.8,phase_M)
+  init_bounded_vector Mage_offset(1,npars_Mage,-3,3,phase_Mage)
+  vector Mage(1,nages)
   init_bounded_vector  M_rw(1,npars_rw_M,-10,10,phase_rw_M)
   vector natmort(styr,endyr)
   matrix  natage(styr,endyr+1,1,nages)
@@ -1009,11 +1072,12 @@ PARAMETER_SECTION
   // vector Sp_Biom(styr_sp,endyr)
   vector pred_rec(styr_rec,endyr)
   vector mod_rec(styr_rec,endyr) // As estimated by model
+  matrix  M(styr,endyr,1,nages)
   matrix  Z(styr,endyr,1,nages)
   matrix  S(styr,endyr,1,nages)
-  number surv
- 
-//-----GROWTH PARAMETERS--------------------------------------------------
+
+
+ //-----GROWTH PARAMETERS--------------------------------------------------
   init_number log_Linf(phase_Linf);
   init_number log_k(phase_k);
   init_number log_Lo(phase_Lo);
@@ -1055,6 +1119,8 @@ PARAMETER_SECTION
 
  //  init_3darray log_selcoffs_fsh(1,nfsh,1,n_sel_ch_fsh,1,nselages_fsh,phase_selcoff_fsh)
   init_matrix_vector log_selcoffs_fsh(1,nfsh,1,n_sel_ch_fsh,1,nselages_fsh,phase_selcoff_fsh) // 3rd dimension out...
+  // option to estimate smoother for selectivity penalty
+  // init_number_vector logSdsmu_fsh(1,nfsh,1,phase_selcoff_fsh) 
   !! if (fsh_sel_opt(1)==4) nnodes_tmp=nnodes_fsh(1);  // NOTE THIS won't work in general
   //init_matrix_vector  log_sel_spl_fsh(1,nfsh,1,n_sel_ch_fsh,1,nnodes_tmp,phase_sel_spl_fsh)
   init_matrix_vector  log_sel_spl_fsh(1,nfsh,1,n_sel_ch_fsh,1,4,phase_sel_spl_fsh)
@@ -1076,11 +1142,12 @@ PARAMETER_SECTION
   3darray sel_fsh(1,nfsh,styr,endyr,1,nages)
   matrix avgsel_fsh(1,nfsh,1,n_sel_ch_fsh);
 
-  matrix  TotF(styr,endyr,1,nages)
+  matrix  Ftot(styr,endyr,1,nages)
   3darray F(1,nfsh,styr,endyr,1,nages)
   3darray eac_fsh(1,nfsh,1,nyrs_fsh_age,1,nages)
 //-----------------------------------------------NEW--------
   3darray elc_fsh(1,nfsh,1,nyrs_fsh_length,1,nlength)
+  3darray elc_ind(1,nind,1,nyrs_ind_length,1,nlength)
 //----------------------------------------------------------
   matrix  pred_catch(1,nfsh,styr,endyr)
   3darray catage(1,nfsh,styr,endyr,1,nages)
@@ -1146,7 +1213,7 @@ PARAMETER_SECTION
   vector age_like_fsh(1,nfsh)
 //---------------------------------NEW
   vector length_like_fsh(1,nfsh)
-  number nyrs_fsh_comps // years w/comps information
+  vector length_like_ind(1,nind)
 //---------------------------------NEW
 
   vector age_like_ind(1,nind)
@@ -1154,11 +1221,15 @@ PARAMETER_SECTION
   matrix sel_like_ind(1,nind,1,4)       
   vector ind_like(1,nind)
   vector fpen(1,6)    
-  vector post_priors(1,4)
+  vector post_priors(1,8)
   vector post_priors_indq(1,nind)
   objective_function_value obj_fun
-  vector obj_comps(1,13)
+  vector obj_comps(1,14)
+  init_number repl_F(5)
 
+  sdreport_number repl_yld
+  sdreport_number repl_SSB
+  sdreport_number B100
   number F50_est
   number F40_est
   number F35_est
@@ -1187,7 +1258,7 @@ PARAMETER_SECTION
   sdreport_number OFL;
   // NOTE TO DAVE: Need to have a phase switch for sdreport variables(
   matrix catch_future(1,4,styr_fut,endyr_fut); // Note, don't project for F=0 (it will bomb)
-  sdreport_matrix future_biomass(1,5,styr_fut,endyr_fut)
+  sdreport_matrix SSB_fut(1,5,styr_fut,endyr_fut)
   !! write_input_log <<"logRzero "<<log_Rzero<<endl;
   !! write_input_log <<"logmeanrec "<<mean_log_rec<<endl;
   !! write_input_log<< "exp(log_sigmarprior "<<exp(log_sigmarprior)<<endl;
@@ -1276,7 +1347,6 @@ PARAMETER_SECTION
     if(phase_selcoff_ind(k)<0)
     {
       write_input_log<<"Fixing "<<indname(k)<<" indices sel to"<<endl<<n_sel_ch_ind(k)<<endl;
-    // exit(1);
       for (int jj=1;jj<=n_sel_ch_ind(k);jj++) 
       {
         log_selcoffs_ind(k,jj)(1,nselages_in_ind(k)) = log_selcoffs_ind_in(k,jj)(1,nselages_in_ind(k));
@@ -1298,12 +1368,39 @@ PARAMETER_SECTION
   write_input_log <<"Leaving parameter init secton"<<endl;
  END_CALCS
 
+PRELIMINARY_CALCS_SECTION
+  // Initialize age-specific changes in M if they are specified
+  M(styr) = Mest;
+  if (npars_Mage>0)
+  {
+    Mage_offset = Mage_offset_in;
+    int jj=1;
+    for (j=1;j<=nages;j++)
+    {
+     if (j==ages_M_changes(jj))
+      {
+        M(styr,j) = M(styr,1)*mfexp(Mage_offset(jj));
+        jj++;
+        if (npars_Mage < jj) jj=npars_Mage;
+      }
+      else
+        if(j>1) 
+          M(styr,j) = M(styr,j-1);
+    }
+  }
+  //Initialize matrix of M
+  for (i=styr+1;i<=endyr;i++)
+    M(i) = M(i-1);
+  log_input(M);
+  Get_Age2length();
+
 INITIALIZATION_SECTION
-  M natmortprior; 
+  Mest natmortprior; 
   steepness steepnessprior
   log_sigmar log_sigmarprior;
-  
-  
+
+
+
   log_Rzero    R_guess;
   mean_log_rec R_guess;
   
@@ -1315,6 +1412,7 @@ INITIALIZATION_SECTION
   // log_avg_fmort -2.065
   log_q_ind log_qprior; 
   log_q_power_ind log_q_power_prior; 
+  repl_F .1;
 
   sel50_fsh sel_inf_in_fshv 
 
@@ -1335,17 +1433,21 @@ PROCEDURE_SECTION
     q_ind(k) = mfexp(log_q_ind(k) );
     q_power_ind(k) = mfexp(log_q_power_ind(k) );
   }
+
   // Main model calcs---------------------
-//---------------------------------------
-  Get_Age2length();
+  if(active(log_Linf)||active(log_k)||active(log_sdage))
+    Get_Age2length();
   Get_Selectivity();
   Get_Mortality();
   Get_Bzero();
   Get_Numbers_at_Age();
+
   Get_Survey_Predictions();
   Get_Fishery_Predictions();
   // Objective function calcs------------
   evaluate_the_objective_function();
+  if (last_phase())
+    Get_Replacement_Yield();
 
   // Output calcs-------------------------
   if (sd_phase())
@@ -1390,7 +1492,7 @@ FUNCTION write_mceval
   Future_projections();
   Calc_Dependent_Vars();
   mceval<<
-  q_ind(1)  << " "<< 
+  q_ind(1,1)  << " "<< 
   M         << " "<< 
   steepness << " "<< 
   depletion << " "<< 
@@ -1404,11 +1506,11 @@ FUNCTION write_mceval
   F35       << " "<<
   F40       << " "<<
   F50       << " "<<
-  future_biomass(1,endyr_fut) << " "<< 
-  future_biomass(2,endyr_fut) << " "<< 
-  future_biomass(3,endyr_fut) << " "<< 
-  future_biomass(4,endyr_fut) << " "<< 
-  future_biomass(5,endyr_fut) << " "<< 
+  SSB_fut(1,endyr_fut) << " "<< 
+  SSB_fut(2,endyr_fut) << " "<< 
+  SSB_fut(3,endyr_fut) << " "<< 
+  SSB_fut(4,endyr_fut) << " "<< 
+  SSB_fut(5,endyr_fut) << " "<< 
   catch_future(1,styr_fut)    << " "<<  
   catch_future(2,styr_fut)    << " "<<  
   catch_future(3,styr_fut)    << " "<<  
@@ -1445,12 +1547,14 @@ FUNCTION dvar_matrix ALK(dvar_vector& mu, dvar_vector& sig, dvector& x)
 	int si,ni; si=mu.indexmin(); ni=mu.indexmax();
 	int sj,nj; sj=x.indexmin(); nj=x.indexmax();
 	dvar_matrix pdf(si,ni,sj,nj);
+  double xs;
 	pdf.initialize();
-	double xs=0.5*(x[sj+1]-x[sj]);
 	for(i=si;i<=ni;i++) //loop over ages
 	{
-		 for(j=sj;j<=nj;j++) //loop over length bins
+		for(j=sj;j<=nj;j++) //loop over length bins
 		{
+      if (j<nj)
+        xs=0.5*(x[sj+1]-x[sj]);  // accounts for variable bin-widths...?
 			z1=((x(j)-xs)-mu(i))/sig(i);
 			z2=((x(j)+xs)-mu(i))/sig(i);
 			pdf(i,j)=cumd_norm(z2)-cumd_norm(z1);
@@ -1463,6 +1567,35 @@ FUNCTION dvar_matrix ALK(dvar_vector& mu, dvar_vector& sig, dvector& x)
 //---------------------------------------------------------------------------
 
 
+FUNCTION Get_Replacement_Yield
+  // compute next year's yield and SSB and add penalty to ensure F gives same SSB... 
+  dvar_vector ntmp(1,nages);
+  ntmp = natage(endyr+1);
+  dvariable SSBnext;
+  dvar_matrix Ftmp(1,nfsh,1,nages);
+  dvar_vector Ctmp(1,nages);
+  dvar_vector Ztmp(1,nages);
+  dvar_vector Stmp(1,nages);
+  Ctmp.initialize();
+  Ztmp  = M(endyr);
+  dvariable sumF=0.;
+  for (k=1;k<=nfsh;k++)
+    sumF += sum(F(k,endyr));
+  for (k=1;k<=nfsh;k++)
+  {
+    Ftmp(k) = repl_F*sum(F(k,endyr)) / sumF;
+    Ztmp   += Ftmp(k);
+  }
+  Stmp = mfexp(-Ztmp);
+  for (k=1;k<=nfsh;k++)
+    Ctmp += elem_prod(wt_fsh(k,endyr),elem_prod(elem_div(Ftmp(k),Ztmp),elem_prod(1.-Stmp,ntmp)) );
+  repl_yld = sum(Ctmp) ;
+  ntmp(2,nages) = ++elem_prod(Stmp(1,nages-1),ntmp(1,nages-1));
+  ntmp(nages)  += ntmp(nages)*Stmp(nages);
+  ntmp(1)       = mean(mod_rec);
+  repl_SSB  = elem_prod(ntmp, pow(Stmp,spmo_frac)) * wt_mature; 
+  obj_fun  += 200.*square(log(Sp_Biom(endyr))-log(repl_SSB));
+  
 FUNCTION Get_Selectivity
   // Calculate the logistic selectivity (Only if being used...)   
   for (k=1;k<=nfsh;k++)
@@ -1649,27 +1782,60 @@ FUNCTION Get_Selectivity
   sel_fsh = mfexp(log_sel_fsh);
   sel_ind = mfexp(log_sel_ind);
 
-FUNCTION Get_Mortality
-  natmort = M;
-  if (npars_rw_M>0)
+FUNCTION Get_NatMortality
+  natmort = Mest;
+  // Age varying part
+  if (npars_Mage>0 && (active(Mest) || active(Mage_offset)))
+  {
+    M(styr) = Mest;
+    int jj=1;
+    for (j=1;j<=nages;j++)
+    {
+      if (j==ages_M_changes(jj))
+      {
+        M(styr,j) = M(styr,1)*mfexp(Mage_offset(jj));
+        jj++;
+        if (npars_Mage < jj) jj=npars_Mage;
+      }
+      else
+        if(j>1) 
+          M(styr,j) = M(styr,j-1);
+    }
+  }
+
+  // Time varying part
+  if (npars_rw_M>0 && active(M_rw))
   {
     int ii=1;
     for (i=styr+1;i<=endyr;i++)
     {
-
       if (i==yrs_rw_M(ii))
       {
-        natmort(i) = natmort(i-1)*mfexp(M_rw(ii));
+        M(i) = M(i-1)*mfexp(M_rw(ii));
         ii++;
         if (npars_rw_M < ii) ii=npars_rw_M;
       }
       else
-        natmort(i) = natmort(i-1);
+        M(i) = M(i-1);
     }
   }
-  for (i=styr;i<=endyr;i++)
-    Z(i) = natmort(i);
+  else
+    for (i=styr+1;i<=endyr;i++)
+      M(i) = M(i-1);
 
+FUNCTION Get_Mortality2
+  Get_NatMortality();
+  Z       = M;
+  for (k=1;k<=nfsh;k++)
+  {
+    F(k)   = elem_div(catage(k),natage);
+    Z     += F(k);
+  }
+  S = mfexp(-1.*Z);
+
+FUNCTION Get_Mortality
+  Get_NatMortality();
+  Z = M; 
   if (!Popes)
   {
     Fmort.initialize();
@@ -1684,6 +1850,7 @@ FUNCTION Get_Mortality
     }
     S  = mfexp(-1.*Z);
   }
+  
 
 FUNCTION Get_Numbers_at_Age
   // natage(styr,1) = mfexp(mean_log_rec + rec_dev(styr)); 
@@ -1702,17 +1869,17 @@ FUNCTION Get_Numbers_at_Age
       Catch_at_Age(i);
       // Pope's approximation //   Next year N     =   This year x NatSurvivl - catch
       natage(i+1)(2,nages) = ++(natage(i)(1,nages-1)*t2 - catage_tot(i)(1,nages-1)*t1);
-      TotF(i)(1,nages-1) = log(natage(i)(1,nages-1)) - --log(natage(i+1)(2,nages)) - natmort(i);
+      Ftot(i)(1,nages-1) = log(natage(i)(1,nages-1)) - --log(natage(i+1)(2,nages)) - natmort(i);
       natage(i+1,nages)   += natage(i,nages)*t2 - catage_tot(i,nages)*t1;
       // Approximation to "F" continuous form for computing within-year sp biomass
-      TotF(i,nages)      = log(natage(i,nages-1)+natage(i,nages)) -log(natage(i+1,nages)) -natmort(i);
-      // write_input_log <<i<<" "<<TotF(i)(nages-4,nages)<<endl; // cout <<i<<" "<<natage(i)<<endl; // cout <<i<<" "<<natage(i+1)<<endl;
+      Ftot(i,nages)      = log(natage(i,nages-1)+natage(i,nages)) -log(natage(i+1,nages)) -natmort(i);
+      // write_input_log <<i<<" "<<Ftot(i)(nages-4,nages)<<endl; // cout <<i<<" "<<natage(i)<<endl; // cout <<i<<" "<<natage(i+1)<<endl;
       dvariable ctmp=sum(catage_tot(i));
       for (k=1;k<=nfsh;k++)
       {
-        F(k,i)  = TotF(i) * sum(catage(k,i))/ctmp;
+        F(k,i)  = Ftot(i) * sum(catage(k,i))/ctmp;
       }
-      Z(i)    = TotF(i)+natmort(i);
+      Z(i)    = Ftot(i)+natmort(i);
       S(i)    = mfexp(-Z(i));
     }
     else // Baranov
@@ -1733,24 +1900,19 @@ FUNCTION Get_Survey_Predictions
   // Survey computations------------------
   dvariable sum_tmp;
   sum_tmp.initialize();
-  for (k=1;k<=nind;k++) 
-  {
-    q_ind(k) = mfexp(log_q_ind(k) );
-    q_power_ind(k) = mfexp(log_q_power_ind(k) );
-  }
-
+  int ii;
   int iyr;
   for (k=1;k<=nind;k++)
   {
     // Set rest of q's in time series equal to the random walk for current (avoids tricky tails...)
-    for (i=1;i<=npars_rw_q(k);i++)
+    for (i=2;i<=(1+npars_rw_q(k));i++)
     {
-      iyr = yrs_rw_q(k,i);  
-      q_ind(k,iyr)  = q_ind(k,iyr-1)*mfexp(log_rw_q_ind(k,i));
-      for (int ii=yrs_rw_q(k,i);ii<=nyrs_ind(k);ii++)
-        q_ind(k,ii)  = q_ind(k,iyr);
+			// get index for the number of observations (can be different than number of q's)
+      ii = yrs_rw_q(k,i-1) - yrs_ind(k,1) + 1;  
+      q_ind(k,ii)  = q_ind(k,ii-1)*mfexp(log_rw_q_ind(k,i-1));
+      for (iyr=ii+1;iyr<=nyrs_ind(k);iyr++)
+        q_ind(k,iyr)  = q_ind(k,ii);
     }
-
     for (i=1;i<=nyrs_ind(k);i++)
     {        
       iyr=yrs_ind(k,i);
@@ -1759,7 +1921,7 @@ FUNCTION Get_Survey_Predictions
     }
     for (i=1;i<=nyrs_ind_age(k);i++)
     {        
-      iyr = int(yrs_ind_age(k,i)); 
+      iyr = yrs_ind_age(k,i); 
       dvar_vector tmp_n   = elem_prod(pow(S(iyr),ind_month_frac(k)),elem_prod(sel_ind(k,iyr),natage(iyr)));  
       sum_tmp             = sum(tmp_n);
       if (use_age_err)
@@ -1767,8 +1929,17 @@ FUNCTION Get_Survey_Predictions
       else
         eac_ind(k,i)      = tmp_n/sum_tmp;
     }
+    dvar_vector tmp_n(1,nages);
+    for (i=1;i<=nyrs_ind_length(k);i++)
+    {        
+      iyr          = yrs_ind_length(k,i); 
+      tmp_n        = elem_prod(pow(S(iyr),ind_month_frac(k)),elem_prod(sel_ind(k,iyr),natage(iyr)));  
+      sum_tmp      = sum(tmp_n);
+      tmp_n       /= sum_tmp;
+      // cout <<tmp_n<<endl<<endl<<P_age2len<<endl;
+      elc_ind(k,i) = tmp_n * P_age2len ;
+    }
     iyr=yrs_ind(k,nyrs_ind(k));
-
     dvar_vector natagetmp = elem_prod(S(endyr),natage(endyr));
     natagetmp(2,nages) = ++natagetmp(1,nages-1);
     natagetmp(1)       = SRecruit(Sp_Biom(endyr+1-rec_age));
@@ -1799,10 +1970,10 @@ FUNCTION Get_Fishery_Predictions
   }
 
 FUNCTION Calc_Dependent_Vars
-  cout<<"In DepVar stage 1"<<endl;
+  // cout<<"In DepVar stage 1"<<endl;
   get_msy();
-  if (phase_proj>0) Future_projections();
 
+  if (phase_proj>0) Future_projections();
   N_NoFsh.initialize();
   N_NoFsh(styr) = natage(styr);
   for (i=styr_sp;i<=styr;i++)
@@ -1814,52 +1985,51 @@ FUNCTION Calc_Dependent_Vars
     {
       N_NoFsh(i,1)        = recruits(i);
       N_NoFsh(i,1)       *= SRecruit(Sp_Biom_NoFish(i-rec_age)) / SRecruit(Sp_Biom(i-rec_age));
-      N_NoFsh(i)(2,nages) = ++N_NoFsh(i-1)(1,nages-1)*exp(-natmort(i-1));
-      N_NoFsh(i,nages)   += N_NoFsh(i-1,nages)*exp(-natmort(i-1));
+      N_NoFsh(i)(2,nages) = ++elem_prod(N_NoFsh(i-1)(1,nages-1),exp(-M(i-1)(1,nages-1)));
+      N_NoFsh(i,nages)   += N_NoFsh(i-1,nages)*exp(-M(i-1,nages));
     }
     totbiom_NoFish(i) = N_NoFsh(i)*wt_pop;
     totbiom(i)        = natage(i)*wt_pop;
-    Sp_Biom_NoFish(i) = (N_NoFsh(i)*pow(exp(-natmort(i)),spmo_frac) * wt_mature); 
+    Sp_Biom_NoFish(i) = N_NoFsh(i)*elem_prod(pow(exp(-M(i)),spmo_frac) , wt_mature); 
     Sp_Biom_NoFishRatio(i) = Sp_Biom(i) / Sp_Biom_NoFish(i) ;
     // cout <<spmo_frac<<endl;exit(1);
     depletion         = totbiom(endyr)/totbiom(styr);
     depletion_dyn     = totbiom(endyr)/totbiom_NoFish(endyr);
   }
-  dvar_vector Ntmp(1,nages);
-  Ntmp(2,nages) = ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1));
-  Ntmp(nages)  += natage(endyr,nages)*S(endyr,nages);
-  Ntmp(1)       = SRecruit(Sp_Biom(endyr+1-rec_age));
-  ABCBiom       = Ntmp*wt_pop;
-  recruits(endyr+1) = Ntmp(1);
+  B100 = phizero * mean(recruits(styr_rec_est, endyr_rec_est));
+  dvar_vector Nnext(1,nages);
+  Nnext(2,nages) = ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1));
+  Nnext(nages)  += natage(endyr,nages)*S(endyr,nages);
+  // Compute SSB in next year using mean recruits for age 1 and same survival as in endyr
+  Nnext(1)       = mfexp(mean_log_rec+rec_dev_future(endyr+1));
+  Sp_Biom(endyr+1)  = elem_prod(Nnext,pow(S(endyr),spmo_frac)) * wt_mature; 
+  // Nnext(1)       = SRecruit(Sp_Biom(endyr+1-rec_age));
+  ABCBiom       = Nnext*wt_pop;
+  recruits(endyr+1) = Nnext(1);
   totbiom(endyr+1)  = ABCBiom;
   // Now do OFL for next year...
-  dvar_vector ntmp(1,nages);
   dvar_matrix seltmp(1,nfsh,1,nages);
   dvar_matrix Fatmp(1,nfsh,1,nages);
   dvar_vector Ztmp(1,nages);
   seltmp.initialize();
   Fatmp.initialize();
   Ztmp.initialize();
-  ntmp.initialize();
   for (k=1;k<=nfsh;k++)
     seltmp(k) = (sel_fsh(k,endyr));
-  Ztmp = (natmort(styr));
+  Ztmp = (M(styr));
   for (k=1;k<=nfsh;k++)
   { 
     Fatmp(k) = (Fratio(k) * Fmsy * seltmp(k));
     Ztmp    += Fatmp(k);
   } 
   dvar_vector survmsy = exp(-Ztmp);
-  ntmp(1)       = (SRecruit(Sp_Biom(endyr+1-rec_age)));
-  ntmp(2,nages) = ( ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1)));
-  ntmp(nages)  += ( natage(endyr,nages)*S(endyr,nages));
   dvar_vector ctmp(1,nages);
   ctmp.initialize();
   OFL=0.;
   for (k=1;k<=nfsh;k++)
   {
       for ( j=1 ; j <= nages; j++ )
-        ctmp(j)      = ntmp(j) * Fatmp(k,j) * (1. - survmsy(j)) / Ztmp(j);
+        ctmp(j)      = Nnext(j) * Fatmp(k,j) * (1. - survmsy(j)) / Ztmp(j);
       OFL  += wt_fsh(k,endyr) * ctmp;
   }
 
@@ -1871,7 +2041,7 @@ FUNCTION void Catch_at_Age(const int& i)
   catage_tot(i).initialize();
   if (Popes)
   {
-    Nmid = natage(i)*mfexp(-natmort(i)/2 ); 
+    Nmid = elem_prod(natage(i),mfexp(-M(i)/2) ); 
   }
   for (k=1;k<=nfsh;k++)
   {
@@ -1917,19 +2087,20 @@ FUNCTION evaluate_the_objective_function
     obj_fun += .5 * square(log_Rzero-mean_log_rec); // A slight penalty to keep Rzero in reality...
 
   obj_comps.initialize();
-  obj_comps(1) = sum(catch_like);
-  obj_comps(2) = sum(age_like_fsh);
+  obj_comps(1)  = sum(catch_like);
+  obj_comps(2)  = sum(age_like_fsh);
 //------------------------------------------NEW-------------
-  obj_comps(3) = sum(length_like_fsh);
+  obj_comps(3)  = sum(length_like_fsh);
 //-----------------------------------------------------------
-  obj_comps(4) = sum(sel_like_fsh);
-  obj_comps(5) = sum(ind_like);
-  obj_comps(6) = sum(age_like_ind);
-  obj_comps(7) = sum(sel_like_ind);
-  obj_comps(8) = sum(rec_like);
-  obj_comps(9) = sum(fpen);
-  obj_comps(10) = sum(post_priors_indq);
-  obj_comps(11)= sum(post_priors);
+  obj_comps(4)  = sum(sel_like_fsh);
+  obj_comps(5)  = sum(ind_like);
+  obj_comps(6)  = sum(age_like_ind);
+  obj_comps(7)  = sum(length_like_ind);
+  obj_comps(8)  = sum(sel_like_ind);
+  obj_comps(9)  = sum(rec_like);
+  obj_comps(10) = sum(fpen);
+  obj_comps(11) = sum(post_priors_indq);
+  obj_comps(12) = sum(post_priors);
   obj_fun     += sum(obj_comps);
 
 FUNCTION Cat_Like
@@ -2007,6 +2178,8 @@ FUNCTION Rec_Like
       if ( endyr > endyr_rec_est)
         rec_like(4) += .5*norm2( rec_dev(endyr_rec_est,endyr  ) )/sigmarsq + (endyr-endyr_rec_est)*log(sigmar) ; 
     }
+    else // JNI comment next line
+       rec_like(2) += norm2( rec_dev(styr_rec_est,endyr) ) ;
 
     rec_like(2) += norm2( rec_dev(styr_rec_est,endyr) ) ;
 
@@ -2024,20 +2197,24 @@ FUNCTION Compute_priors
   for (k=1;k<=nind;k++)
   {
     if (active(log_q_ind(k)))
-      post_priors_indq(k) += square(log(q_ind(k,1)/qprior(k)))/(2*cvqprior(k)*cvqprior(k)); 
+      post_priors_indq(k) += square(log(q_ind(k,1)/qprior(k)))/(2.*cvqprior(k)*cvqprior(k)); 
     if (active(log_q_power_ind(k)))
-      post_priors_indq(k) += square(log(q_power_ind(k)/q_power_prior(k)))/(2*cvq_power_prior(k)*cvq_power_prior(k)); 
+      post_priors_indq(k) += square(log(q_power_ind(k)/q_power_prior(k)))/(2.*cvq_power_prior(k)*cvq_power_prior(k)); 
     if (active(log_rw_q_ind(k)))
       for (int i=1;i<=npars_rw_q(k);i++)
       {
-        post_priors_indq(k) += square(log_rw_q_ind(k,i))/ (2.*sigma_rw_q(k,yrs_rw_q(k,i))*sigma_rw_q(k,yrs_rw_q(k,i))) ;
+        post_priors_indq(k) += square(log_rw_q_ind(k,i))/ (2.*sigma_rw_q(k,i)*sigma_rw_q(k,i)) ;
         // cout<<"Hear "<<sigma_rw_q(k,yrs_rw_q(k,i))<<endl;
       }
      //  -q_power_prior(k))/(2*cvq_power_prior(k)*cvq_power_prior(k)); 
   }
 
-  if (active(M))
-    post_priors(1) += square(log(M/natmortprior))/(2*cvnatmortprior*cvnatmortprior); 
+  if (active(Mest))
+    post_priors(1) += square(log(Mest/natmortprior))/(2.*cvnatmortprior*cvnatmortprior); 
+
+  if (active(Mage_offset))  
+    post_priors(1) += norm2(Mage_offset)/(2.*cvnatmortprior*cvnatmortprior); 
+
   if (active(M_rw))
     for (int i=1;i<=npars_rw_M;i++)
       post_priors(1) +=  square(M_rw(i))/ (2.*sigma_rw_M(i)*sigma_rw_M(i)) ;
@@ -2048,18 +2225,19 @@ FUNCTION Compute_priors
   if (active(log_sigmar))
     post_priors(3) += square(log(sigmar/sigmarprior))/(2*cvsigmarprior*cvsigmarprior); 
 
+
 //--------------------------NEW------------------------------------
   if (active(log_Linf))
-    post_priors(4) += square(exp(log_Linf)-Linfprior)/(2*cvLinfprior*cvLinfprior); 
+    post_priors(4) += square(log_Linf-log_Linfprior)/(2*cvLinfprior*cvLinfprior); 
 
   if (active(log_k))
-    post_priors(5) += square(exp(log_k)-kprior)/(2*cvkprior*cvkprior); 
+    post_priors(5) += square(log_k-log_kprior)/(2*cvkprior*cvkprior); 
 
   if (active(log_Lo))
-    post_priors(6) += square(exp(log_Lo)-Loprior)/(2*cvLoprior*cvLoprior); 
+    post_priors(6) += square(log_Lo-log_Loprior)/(2*cvLoprior*cvLoprior); 
 
   if (active(log_sdage))
-    post_priors(7) += square(exp(log_sdage)-sdageprior)/(2*cvsdageprior*cvsdageprior); 
+    post_priors(7) += square(log_sdage-log_sdageprior)/(2*cvsdageprior*cvsdageprior); 
 
 FUNCTION Fmort_Pen
   // Phases less than 3, penalize High F's---------------------------------
@@ -2090,7 +2268,11 @@ FUNCTION Sel_Like
       for (i=1;i<=n_sel_ch_fsh(k);i++)
       {
         int iyr = yrs_sel_ch_fsh(k,i) ;
+        // If curvature penalty is assumed....
         sel_like_fsh(k,1) += curv_pen_fsh(k)*norm2(first_difference( first_difference(log_sel_fsh(k,iyr))));
+        // If curvature penalty (sigma) is estimated....
+        // dvariable var=mfexp(2.0*logSdsmu_fsh(k));
+        // sel_like_fsh(k,1) += 0.5*(size.count(log_sel_fsh(k,iyr))*log(var) +  norm2(first_difference( first_difference(log_sel_fsh(k,iyr)))) /var);
         if (i>1)
         {
           // This part is the penalty on the change itself--------------
@@ -2150,7 +2332,7 @@ FUNCTION Srv_Like
   for (k=1;k<=nind;k++)
     for (i=1;i<=nyrs_ind(k);i++)
     {
-      iyr = int(yrs_ind(k,i));
+      // iyr = int(yrs_ind(k,i));
       ind_like(k) += square(log(obs_ind(k,i)) - log(pred_ind(k,i)) ) / 
                                    (2.*obs_lse_ind(k,i)*obs_lse_ind(k,i));
     }
@@ -2173,6 +2355,12 @@ FUNCTION Age_Like
     for (int i=1;i<=nyrs_fsh_length(k);i++)
       length_like_fsh(k) -= n_sample_fsh_length(k,i)*(olc_fsh(k,i) + 0.001) * log(elc_fsh(k,i) + 0.001 ) ;
   length_like_fsh -= offset_lfsh;
+//----------------------------------------------------------
+  length_like_ind.initialize();
+  for (k=1;k<=nind;k++)
+    for (int i=1;i<=nyrs_ind_length(k);i++)
+      length_like_ind(k) -= n_sample_ind_length(k,i)*(olc_ind(k,i) + 0.001) * log(elc_ind(k,i) + 0.001 ) ;
+  length_like_ind -= offset_lind;
 //----------------------------------------------------------
   age_like_ind.initialize();
   for (k=1;k<=nind;k++)
@@ -2245,14 +2433,14 @@ FUNCTION Oper_Model
      //if (cmp_no==6) C_tmp=value((natmort(styr))*.75*mean(t_tmp(nobstmp-2,nobstmp)));
      if (cmp_no==5) 
      {
-       C_tmp = min(C_tmp*1.1,value(natmort(styr)*(t_tmp(nobstmp))));
+       C_tmp = min(C_tmp*1.1,value((natmort(styr)*t_tmp(nobstmp))));
        ofstream cnext("CatchNext.dat");
        cnext <<C_tmp<<endl;
        cnext.close();
      }
      if (cmp_no==6) 
      {
-       C_tmp = min(C_tmp*1.1,value(natmort(styr)*.75*(t_tmp(nobstmp))));
+       C_tmp = min(C_tmp*1.1,value(natmort(styr)*.75*t_tmp(nobstmp)));
        ofstream cnext("CatchNext.dat");
        cnext <<C_tmp<<endl;
        cnext.close();
@@ -2262,7 +2450,7 @@ FUNCTION Oper_Model
 
       F_future(1,i) = sel_fsh(1,endyr) * Fnow;
       //Z_future(i)   = F_future(1,i) + max(natmort);
-      Z_future(i)   = F_future(1,i) + mean(natmort);
+      Z_future(i)   = F_future(1,i) + mean(M);
       S_future(i)   = mfexp(-Z_future(i));
       nage_future(i,1)  = SRecruit( Sp_Biom_future(i-rec_age) ) * mfexp(rec_dev_future(i)) ;     
       Sp_Biom_future(i) = wt_mature * elem_prod(nage_future(i),pow(S_future(i),spmo_frac)) ;
@@ -2286,7 +2474,7 @@ FUNCTION Oper_Model
         " "  << Sp_Biom_future(i-rec_age)                       <<
         " "  << nage_future(i)                                  <<
         " "  << catage_future(i)*wt_fsh(1,endyr)                <<
-        " "  << mean(natmort)                                   <<
+        " "  << mean(M)                                   <<
         " "  << t_tmp(nobstmp)                                  <<
       endl;
     }
@@ -2332,17 +2520,17 @@ FUNCTION void get_future_Fs(const int& i,const int& iscenario)
         F_fut_tmp = 0.0;
         break;
     }
-    Z_future(i) = natmort(endyr);
+    Z_future(i) = M(endyr);
     for (k=1;k<=nfsh;k++)
     {
-      F_future(k,i) = F_fut_tmp(k);
+      F_future(k,i) = sel_fsh(k,endyr) * f_tmp(k);
       Z_future(i)  += F_future(k,i);
     }
     S_future(i) = mfexp(-Z_future(i));
 
 FUNCTION Future_projections
   // Need to check on treatment of Fratio--whether it should be included or not
-  future_biomass.initialize();
+  SSB_fut.initialize();
   catch_future.initialize();
   for (int iscen=1;iscen<=5;iscen++)
   {
@@ -2399,7 +2587,7 @@ FUNCTION Future_projections
         }
         // cout<<F_future(1,i)<<endl; cout<<F_future(2,i)<<endl; cout<<F_future(3,i)<<endl; cout<<F_future(4,i)<<endl; cout<<F(1,endyr)<<endl; cout<<F(2,endyr)<<endl; cout<<F(3,endyr)<<endl; cout<<F(4,endyr)<<endl; exit(1);
       }
-      future_biomass(iscen,i) = Sp_Biom_future(i);
+      SSB_fut(iscen,i) = Sp_Biom_future(i);
     }
   }   //End of loop over F's
   Sp_Biom(endyr+1) = Sp_Biom_future(endyr+1);
@@ -2568,7 +2756,7 @@ FUNCTION dvar_vector yld(const dvar_vector& Fratio, const dvariable& Ftmp,int iy
   dvar_matrix Fatmp(1,nfsh,1,nages);
   dvar_vector Ztmp(1,nages);
 
-  Ztmp = natmort(iyr);
+  Ztmp = M(iyr);
   for (k=1;k<=nfsh;k++)
   { 
     Fatmp(k) = Fratio(k) * Ftmp * seltmp(k);
@@ -2617,7 +2805,7 @@ FUNCTION dvar_vector yld(const dvar_vector& Fratio, const dvariable& Ftmp)
   dvar_matrix Fatmp(1,nfsh,1,nages);
   dvar_vector Ztmp(1,nages);
 
-  Ztmp = natmort(styr);
+  Ztmp = M(styr);
   for (k=1;k<=nfsh;k++)
   { 
     Fatmp(k) = Fratio(k) * Ftmp * seltmp(k);
@@ -2666,7 +2854,7 @@ FUNCTION dvariable yield(const dvar_vector& Fratio, const dvariable& Ftmp,int iy
   dvar_matrix Fatmp(1,nfsh,1,nages);
   dvar_vector Ztmp(1,nages);
 
-  Ztmp = natmort(iyr);
+  Ztmp = M(iyr);
   for (k=1;k<=nfsh;k++)
   { 
     Fatmp(k) = Fratio(k) * Ftmp * seltmp(k);
@@ -2713,7 +2901,7 @@ FUNCTION dvariable yield(const dvar_vector& Fratio, const dvariable& Ftmp)
   dvar_matrix Fatmp(1,nfsh,1,nages);
   dvar_vector Ztmp(1,nages);
 
-  Ztmp = natmort(styr);
+  Ztmp = M(styr);
   for (k=1;k<=nfsh;k++)
   { 
     Fatmp(k) = Fratio(k) * Ftmp * seltmp(k);
@@ -2757,7 +2945,7 @@ FUNCTION dvariable yield(const dvar_vector& Fratio, dvariable& Ftmp, dvariable& 
   dvar_matrix Fatmp(1,nfsh,1,nages);
   dvar_vector Ztmp(1,nages);
 
-  Ztmp = natmort(styr);
+  Ztmp = M(styr);
   for (k=1;k<=nfsh;k++)
   { 
     Fatmp(k) = Fratio(k) * Ftmp * seltmp(k);
@@ -2890,18 +3078,18 @@ FUNCTION Get_Bzero
   Bzero.initialize();
   Rzero    =  mfexp(log_Rzero); 
 
-  dvariable survtmp = mfexp(-natmort(styr));
-  surv = survtmp;
+  dvar_vector survtmp(1,nages);
+  survtmp = mfexp(-M(styr));
 
   dvar_matrix natagetmp(styr_rec,styr,1,nages);
   natagetmp.initialize();
 
   natagetmp(styr_rec,1) = Rzero;
   for (j=2; j<=nages; j++)
-    natagetmp(styr_rec,j) = natagetmp(styr_rec,j-1) * survtmp;
-  natagetmp(styr_rec,nages) /= (1.-survtmp); 
+    natagetmp(styr_rec,j) = natagetmp(styr_rec,j-1) * survtmp(j-1);
+  natagetmp(styr_rec,nages) /= (1.-survtmp(nages)); 
 
-  Bzero = wt_mature * pow(survtmp,spmo_frac)*natagetmp(styr_rec) ;
+  Bzero = elem_prod(wt_mature , pow(survtmp,spmo_frac))*natagetmp(styr_rec) ;
   phizero = Bzero/Rzero;
 
   switch (SrType)
@@ -2926,16 +3114,18 @@ FUNCTION Get_Bzero
   Sp_Biom(styr_sp,styr_rec-1) = Bzero;
   for (i=styr_rec;i<styr;i++)
   {
-    Sp_Biom(i) = natagetmp(i)*pow(surv,spmo_frac) * wt_mature; 
+    Sp_Biom(i) = elem_prod(natagetmp(i),pow(survtmp,spmo_frac)) * wt_mature; 
     // natagetmp(i,1)          = mfexp(rec_dev(i) + log_Rzero); // OjO numbers a function of mean not SR curve...
     natagetmp(i,1)          = mfexp(rec_dev(i) + mean_log_rec);
-    natagetmp(i+1)(2,nages) = ++(natagetmp(i)(1,nages-1)*mfexp(-natmort(styr) ));
-    natagetmp(i+1,nages)   += natagetmp(i,nages)*mfexp(-natmort(styr));
+    natagetmp(i+1)(2,nages) = ++elem_prod(natagetmp(i)(1,nages-1),mfexp(-M(styr)(1,nages-1)) );
+    natagetmp(i+1,nages)   += natagetmp(i,nages)*mfexp(-M(styr,nages));
   }
+  // This sets first year recruitment as deviation from mean recruitment (since SR curve can
+  // be defined for different periods and is treated semi-independently)
   natagetmp(styr,1)   = mfexp(rec_dev(styr) + mean_log_rec);
   mod_rec(styr_rec,styr) = column(natagetmp,1);
   natage(styr)  = natagetmp(styr); // OjO
-  Sp_Biom(styr) = natagetmp(styr)*pow(surv,spmo_frac) * wt_mature; 
+  Sp_Biom(styr) = elem_prod(natagetmp(styr),pow(survtmp,spmo_frac)) * wt_mature; 
   // cout <<natagetmp<<endl;exit(1);
 
 FUNCTION dvariable Requil(dvariable& phi)
@@ -2980,7 +3170,6 @@ FUNCTION write_mceval_hdr
 
 //+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+ 
 REPORT_SECTION
-
   if (last_phase())
   {
     int nvar1=initial_params::nvarcalc(); // get the number of active parameters
@@ -3008,8 +3197,8 @@ REPORT_SECTION
     }
     if (!Popes)
       for (k=1;k<=nfsh;k++)
-        TotF += F(k);
-    log_param(M);
+        Ftot += F(k);
+    log_param(Mest);
     log_param(mean_log_rec);
     log_param(steepness);
     log_param(log_Rzero);
@@ -3063,27 +3252,31 @@ REPORT_SECTION
         report << "        Year: "<<i<<" "<<F(k,i)<<  " "<< endl;
     }
 
+    report << endl<< "survey q " << endl;
+    report <<q_ind<<endl;
     report << endl<< "Observed survey values " << endl;
     for (k=1;k<=nind;k++)
     {
       int ii=1;
       report <<endl<< "Yr_Obs_Pred_Survey "<< k <<" : "<< endl ;
-      // for (i=styr;i<=endyr;i++)
-      // {
-        if (ii<=yrs_ind(k).indexmax())
+      for (int iyr=styr;iyr<=endyr;iyr++)
+      {
+        dvariable pred_tmp ;
+        if (ii<=nyrs_ind(k))
         {
-          if (yrs_ind(k,ii)==i)
+          pred_tmp = q_ind(k,ii) * pow(elem_prod(natage(iyr),pow(S(iyr),ind_month_frac(k))) * 
+                        elem_prod(sel_ind(k,iyr) , wt_ind(k,iyr)),q_power_ind(k));
+          if (yrs_ind(k,ii)==iyr)
           {
-            report << i<< " "<< obs_ind(k,ii) << " "<< pred_ind(k,ii) <<endl;
+            report << iyr<< " "<< 
+                     obs_ind(k,ii) << " "<< pred_tmp <<endl;
             ii++;
           }
-          //else
-            //report << i<< " -1 "<< " "<< pred_ind(k,i)<<endl;
+          else
+            report << iyr<< " -1 "<< " "<< pred_tmp   <<endl;
         }
-        //else
-          //report << i<< " -1 "<< " "<< pred_ind(k,i)<<endl;
       }
-    // }
+    }
 
     report << endl<< "Survey_Q:  "<<q_ind << endl;
 
@@ -3180,13 +3373,14 @@ REPORT_SECTION
     report   << "  catch_like  age_like_fsh sel_like_fsh ind_like age_like_ind sel_like_ind rec_like fpen post_priors_indq post_priors residual total"<<endl;
     report   << " "<<obj_comps<<endl;
 
-    obj_comps(12)= obj_fun - sum(obj_comps) ; // Residual 
-    obj_comps(13)= obj_fun ;                  // Total
+    obj_comps(13)= obj_fun - sum(obj_comps) ; // Residual 
+    obj_comps(14)= obj_fun ;                  // Total
     report   <<"  catch_like       "<<setw(10)<<obj_comps(1) <<endl
              <<"  age_like_fsh     "<<setw(10)<<obj_comps(2) <<endl
-             <<"  len_like_fsh     "<<setw(10)<<obj_comps(3) <<endl
+             <<"  length_like_fsh  "<<setw(10)<<obj_comps(3) <<endl
              <<"  sel_like_fsh     "<<setw(10)<<obj_comps(4) <<endl
              <<"  ind_like        "<<setw(10)<<obj_comps(5) <<endl
+             <<"  length_like_ind  "<<setw(10)<<obj_comps(6) <<endl
              <<"  age_like_ind     "<<setw(10)<<obj_comps(6) <<endl
              <<"  sel_like_ind     "<<setw(10)<<obj_comps(7) <<endl
              <<"  rec_like         "<<setw(10)<<obj_comps(8) <<endl
@@ -3478,7 +3672,7 @@ FUNCTION write_proj
  newproj <<"#_F_ratio(must_sum_to_one_only_one_fishery)"<<endl;
  newproj <<"1"<<endl;
  newproj <<"#_Natural_Mortality" << aa << endl;
-   for (j=1;j<=nages;j++) newproj <<natmort(endyr)<<" "; newproj<<endl;
+   for (j=1;j<=nages;j++) newproj <<M(endyr)<<" "; newproj<<endl;
  newproj <<"#_Maturity_divided_by_2(projection_program_uses_to_get_female_spawning_biomass_if_divide_by_2"<<aa<<endl<<2.*maturity<< endl;
  newproj <<"#_Wt_at_age_spawners"<<aa<<endl<<wt_pop<< endl;
  newproj <<"#_Wt_at_age_fishery" <<aa<<endl<<wt_fsh(1,endyr) << endl;
@@ -3488,7 +3682,7 @@ FUNCTION write_proj
  seltmp = value(sel_fsh(1,endyr)) +value(sel_fsh(1,endyr-1))  +value(sel_fsh(1,endyr-2));  
  newproj << seltmp/max(seltmp)<<endl;
  newproj <<"#_Numbers_at_age_end_year"<<aa<<endl<<natage(endyr)<< endl;
-  if (styr<(1977-rec_age-1))
+  if (styr<=1977)
   {
    newproj <<"#_N_recruitment_years (not including last estimate)"<<endl<<endyr-(1977+rec_age) << endl;
    newproj <<"#_Recruitment_start_at_1977_yearclass=1978_for_age_1_recruits"<<yy(1977+rec_age,endyr-1)
@@ -3519,7 +3713,6 @@ FINAL_SECTION
   
 GLOBALS_SECTION
   #include <admodel.h>
-
 	#undef truth
 	#define truth(object) trudat << #object "\n" << object << endl;
 	#undef REPORT
@@ -3527,7 +3720,7 @@ GLOBALS_SECTION
 	#undef R_Report
 	#define R_Report(object) R_report << "$"#object "\n" << object << endl;
 	/**
-	\def log_input(object)
+	 \def log_input(object)
 	Prints name and value of \a object on ADMB report %ofstream file.
 	*/
 	#undef log_input
@@ -3549,78 +3742,6 @@ GLOBALS_SECTION
   adstring tmpstring;
   adstring repstring;
   adstring version_info;
-
- typedef vcubic_spline_function * pvcubic_spline_function;
- class vcubic_spline_function_array
- {
- public:
-   int indexmin(void) {return index_min;}
-   int indexmax(void) {return index_max;}
-   vcubic_spline_function_array(int,int,const dvector & x, 
-           const dvar_matrix& _y);
-   ~vcubic_spline_function_array();
-   vcubic_spline_function & operator () (int i);
-   vcubic_spline_function_array(const dvector & x);
-   // so that this will fail define it if you need it.
-   vcubic_spline_function_array(const vcubic_spline_function_array&);
-   dvar_matrix operator( ) (const dvector & v);
-   
- private:
-   vcubic_spline_function ** ptr;
-   int index_min;
-   int index_max;
- };
-
-  vcubic_spline_function & vcubic_spline_function_array::operator () (int i)
-  {
-    if (i<indexmin() || i> indexmax())
-    {
-      cerr << "index out of range in function"
-           " vcubic_spline_function & operator () (int i)"
-       << endl;
-      ad_exit(1);
-    }
-    return *(ptr[i]);
-  }
-    
-  dvar_matrix vcubic_spline_function_array::operator( ) (const dvector & v)
-  {
-    int mmin=indexmin();
-    int mmax=indexmax();
-    dvar_matrix tmp(mmin,mmax,v.indexmin(),v.indexmax());
-    for (int i=mmin;i<=mmax;i++)
-    {
-      tmp(i)=(*this)(i)(v);   
-    }
-    return tmp;
-  }
-
-  vcubic_spline_function_array::vcubic_spline_function_array(int mmin,int mmax,
-  const dvector & x, const dvar_matrix& y)
-  {
-    index_min=mmin;
-    index_max=mmax;
-    int n=mmax-mmin+1;
-    ptr = new pvcubic_spline_function[n];
-    ptr-=mmin;
-    for (int i=mmin;i<=mmax;i++)
-    {
-      ptr[i]= new  vcubic_spline_function(x,y(i));
-    }
-  }
-  vcubic_spline_function_array::~vcubic_spline_function_array()
-  {
-    int mmin=indexmin();
-    int mmax=indexmax();
-  
-    for (int i=mmin;i<=mmax;i++)
-    {
-      delete ptr[i];
-    }
-    ptr+=mmin;
-    delete ptr;
-    ptr=0;
-  }
 
 FUNCTION dvariable get_spr_rates(double spr_percent)
   RETURN_ARRAYS_INCREMENT();
@@ -3674,7 +3795,7 @@ FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr)
   for (j=1;j<=nages;j++) 
   {
     Ftmp(j) = elem_prod(Ftmp(j), trial_F * Fratio);
-    srvtmp(j)  = mfexp(-sum(Ftmp(j)) - natmort(iyr));
+    srvtmp(j)  = mfexp(-sum(Ftmp(j)) - M(iyr,j));
   }
   Ntmp(1)=1.;
   j=1;
@@ -3695,11 +3816,11 @@ FUNCTION dvariable spr_unfished(int i)
   Ntmp = 1.;
   for (j=1;j<nages;j++)
   {
-    SBtmp += Ntmp*wt_mature(j)*exp(-spmo_frac * natmort(i));
-    Ntmp  *= mfexp( -natmort(i));
+    SBtmp += Ntmp*wt_mature(j)*exp(-spmo_frac * M(i,j));
+    Ntmp  *= mfexp( -M(i,j));
   }
-  Ntmp    /= (1.-exp(-natmort(i)));
-  SBtmp += Ntmp*wt_mature(j)*exp(-spmo_frac * natmort(i));
+  Ntmp    /= (1.-exp(-M(i,nages)));
+  SBtmp += Ntmp*wt_mature(nages)*exp(-spmo_frac * M(i,nages));
   return(SBtmp);
 
 FUNCTION compute_spr_rates
@@ -3722,22 +3843,7 @@ FUNCTION compute_spr_rates
     F40(k) = F40_est * (Fratio(k));
     F35(k) = F35_est * (Fratio(k));
   }
-
-  /* FUNCTION get_agematrix
-  // B3+($B$5-$B$4)/(COUNT($B$2:$L$2)-1)
-  for (i=1;i<=nages;i++)
-    {
-     sd_age(i)=cv_age(i)*len_age(i);
-     var_age(i)=sd_age(i)*sd_age(i);
-     for (int j=1;j<=nlenbins;j++)
-       {
-        diff = len(j)-len_age(i);
-        trans(i,j)=2/sd_age(i)*exp(-diff*diff/(2*var_age(i)));
-       }
-      trans(i)=trans(i)/sum(trans(i));
-    }
-    */ 
-
+  cout << F50<<endl<<F40<<endl<<F35<<endl;
 
 FUNCTION void writerep(dvariable& tmp,adstring& tmpstring)
   cout <<tmpstring<<endl<<endl;
@@ -3748,11 +3854,13 @@ FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const doubl
   dvariable dd = 10.;
   dvariable cc; 
   dvar_matrix Fratsel(1,nfsh,1,nages);
+  dvar_vector M_tmp(1,nages) ;
   dvar_vector Z_tmp(1,nages) ;
   dvar_vector S_tmp(1,nages) ;
   dvar_vector Ftottmp(1,nages);
   dvariable btmp =  N_tmp * elem_prod(sel_fsh(1,iyr),wt_pop);
   dvariable ftmp;
+  M_tmp = M(iyr);
   ftmp = TACin/btmp;
     for (k=1;k<=nfsh;k++)
       Fratsel(k) = Fratio(k)*sel_fsh(k,iyr);
@@ -3762,7 +3870,7 @@ FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const doubl
       for (k=1;k<=nfsh;k++)
         Ftottmp += ftmp*Fratsel(k);
   
-      Z_tmp = Ftottmp  + M; 
+      Z_tmp = Ftottmp  + M_tmp; 
       S_tmp = mfexp( -Z_tmp );
       cc = 0.0;
       for (k=1;k<=nfsh;k++)
@@ -3775,62 +3883,6 @@ FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const doubl
   RETURN_ARRAYS_DECREMENT();
   return(ftmp);
 
-FUNCTION dvar_vector SolveF2(const int& iyr, const dvar_vector& N_tmp, const dvector&  Catch)
-  // Returns vector of F's (given year) by fleet
-  // Requires: N and fleet specific wts & selectivities at age, catch 
-  // iterate to get Z's right
-  RETURN_ARRAYS_INCREMENT();
-  dvariable dd = 10.;
-  dvariable cc; 
-  dvar_matrix  seltmp(1,nfsh,1,nages);
-  dvar_matrix  wt_tmp(1,nfsh,1,nages);
-  dvar_matrix Fratsel(1,nfsh,1,nages);
-  dvar_vector Z_tmp(1,nages) ;
-  dvar_vector S_tmp(1,nages) ;
-  dvar_vector Ftottmp(1,nages);
-  dvar_vector Frat(1,nfsh);
-  dvar_vector btmp(1,nfsh);
-  dvar_vector ftmp(1,nfsh);
-  dvar_vector hrate(1,nfsh);
-  btmp.initialize(); 
-  // Initial guess for Fratio
-  for (k=1;k<=nfsh;k++)
-  {
-    seltmp(k)= sel_fsh(k,iyr); // Selectivity
-    wt_tmp(k)= wt_fsh(k,iyr); // 
-    btmp(k)  =  N_tmp * elem_prod(seltmp(k),wt_tmp(k));
-    hrate(k) = Catch(k)/btmp(k);
-    ftmp(k) = 1.1*(1.- posfun(1.-hrate(k),.10,fpen(4)));
-  }
-  Frat  = Catch/sum(Catch);
-  for (k=1;k<=nfsh;k++)
-    Fratsel(k) = Frat(k)*seltmp(k);
-  // Initial fleet-specific F
-  // iterate to balance effect of multiple fisheries...........
-  for (int kk=1;kk<=nfsh;kk++) 
-  {
-    for (k=1;k<=nfsh;k++)
-    {
-      if (hrate(k) <.9999) 
-      {
-        for (int ii=1;ii<=5;ii++)
-        {
-          Ftottmp.initialize();
-          Ftottmp   = ftmp*Fratsel;
-          Z_tmp     = Ftottmp  + M; 
-          S_tmp     = mfexp( -Z_tmp );
-          cc        = wt_tmp(k) * elem_prod(elem_div(ftmp(k)*Fratsel(k),  Z_tmp),elem_prod(1.-S_tmp,N_tmp)); // Catch equation (vectors)
-          ftmp(k)  += ( Catch(k)-cc ) / btmp(k);
-        }
-      }
-    }
-    Frat(kk)    = ftmp(kk)/sum(ftmp);
-    Fratsel(kk) = Frat(kk)*seltmp(kk);
-  }
-  RETURN_ARRAYS_DECREMENT();
-  return(ftmp);
-
-
 FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
   // Returns vector of F's (given year) by fleet
   // Requires: N and fleet specific wts & selectivities at age, catch 
@@ -3842,6 +3894,7 @@ FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
   dvar_matrix  wt_tmp(1,nfsh,1,nages);
   dvar_matrix Fratsel(1,nfsh,1,nages);
   dvar_vector N_tmp = natage(iyr);
+  dvar_vector M_tmp(1,nages) ;
   dvar_vector Z_tmp(1,nages) ;
   dvar_vector S_tmp(1,nages) ;
   dvar_vector Ftottmp(1,nages);
@@ -3850,6 +3903,7 @@ FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
   dvar_vector ftmp(1,nfsh);
   dvar_vector hrate(1,nfsh);
   btmp.initialize(); 
+  M_tmp = M(iyr);
   // Initial guess for Fratio
   for (k=1;k<=nfsh;k++)
   {
@@ -3873,7 +3927,7 @@ FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
         {
           Ftottmp.initialize();
           Ftottmp   = ftmp*Fratsel;
-          Z_tmp     = Ftottmp  + M; 
+          Z_tmp     = Ftottmp  + M_tmp; 
           S_tmp     = mfexp( -Z_tmp );
           cc        = wt_tmp(k) * elem_prod(elem_div(ftmp(k)*Fratsel(k),  Z_tmp),elem_prod(1.-S_tmp,N_tmp)); // Catch equation (vectors)
           ftmp(k)  += ( Catch(k)-cc ) / btmp(k);
@@ -3914,7 +3968,7 @@ FUNCTION Write_SimDatafile
   dmatrix catagetmp(styr,endyr,1,nages);
   dvector sim_catchbio(styr,endyr);
   double survtmp = value(mfexp(-natmort(styr)));
-  for (k=1;k<=nfsh;k++) TotF += F(k);
+  for (k=1;k<=nfsh;k++) Ftot += F(k);
 
   for (int isim=1;isim<=nsims;isim++)
   {
@@ -3943,7 +3997,7 @@ FUNCTION Write_SimDatafile
       {
         // apply estimated survival rates
         sim_Sp_Biom(i)          = value( elem_prod(sim_natage(i),pow(S(i),spmo_frac)) * wt_mature); 
-        catagetmp(i)            = value( elem_prod(elem_div(TotF(i),Z(i)),elem_prod(1.-S(i),sim_natage(i))));
+        catagetmp(i)            = value( elem_prod(elem_div(Ftot(i),Z(i)),elem_prod(1.-S(i),sim_natage(i))));
         sim_catchbio(i)         = catagetmp(i)*wt_fsh(1,i);
         if (i<endyr)
         {
@@ -4526,13 +4580,27 @@ FUNCTION Write_Datafile
 
 FUNCTION Write_R
   ofstream R_report("For_R.rep");
-  // R_report<<"$MyC"<<endl; for (i=styr;i<=endyr;i++) {R_report<<i<<" "; for (k=1;k<=nfsh;k++) R_report<<catage(k,i)*wt_fsh(k,i)<<" ";R_report<<endl;}
+  R_report<< "$repl_yld"<<endl<<repl_yld<<endl; 
+  R_report<< "$repl_SSB"<<endl<<repl_SSB<<endl; 
+  R_report<<"$M"<<endl; 
+  R_report<<M<<endl;
+  for (k=1;k<=nind;k++)
+  {
+    R_report<<"$q_"<<k<<endl; 
+    for (i=1;i<nyrs_ind(k);i++)
+    {        
+      int iyr=yrs_ind(k,i);
+      for (int ii=iyr;ii<yrs_ind(k,i+1);ii++)
+        R_report<<ii<<" "<<pow(q_ind(k,i),q_power_ind(k))<<endl;
+    }
+    R_report<<yrs_ind(k,nyrs_ind(k))<<" "<<pow(q_ind(k,nyrs_ind(k)),q_power_ind(k))<<endl;
+  }
   R_report<<"$M"<<endl; R_report<<natmort<<endl;
   R_report<<"$SurvNextYr"<<endl; R_report<< pred_ind_nextyr <<endl;
   R_report<<"$Yr"<<endl; for (i=styr;i<=endyr;i++) R_report<<i<<" "; R_report<<endl;
   R_Report(P_age2len);
   R_Report(len_bins);
-  R_Report(TotF);
+  R_report<<"$TotF"<<endl << Ftot<<endl;
   R_report<<"$TotBiom_NoFish"<<endl; for (i=styr;i<=endyr;i++) 
   {
     double lb=value(totbiom_NoFish(i)/exp(2.*sqrt(log(1+square(totbiom_NoFish.sd(i))/square(totbiom_NoFish(i))))));
@@ -4558,9 +4626,9 @@ FUNCTION Write_R
     R_report<<"$SSB_fut_"<<k<<endl; 
     for (i=styr_fut;i<=endyr_fut;i++) 
     {
-      double lb=value(future_biomass(k,i)/exp(2.*sqrt(log(1+square(future_biomass.sd(k,i))/square(future_biomass(k,i))))));
-      double ub=value(future_biomass(k,i)*exp(2.*sqrt(log(1+square(future_biomass.sd(k,i))/square(future_biomass(k,i))))));
-      R_report<<i<<" "<<future_biomass(k,i)<<" "<<future_biomass.sd(k,i)<<" "<<lb<<" "<<ub<<endl;
+      double lb=value(SSB_fut(k,i)/exp(2.*sqrt(log(1+square(SSB_fut.sd(k,i))/square(SSB_fut(k,i))))));
+      double ub=value(SSB_fut(k,i)*exp(2.*sqrt(log(1+square(SSB_fut.sd(k,i))/square(SSB_fut(k,i))))));
+      R_report<<i<<" "<<SSB_fut(k,i)<<" "<<SSB_fut.sd(k,i)<<" "<<lb<<" "<<ub<<endl;
     }
   }
   double ctmp;
@@ -4639,6 +4707,12 @@ FUNCTION Write_R
         for (i=1;i<=nyrs_fsh_age(k);i++) 
           R_report << yrs_fsh_age(k,i)<< " "<< oac_fsh(k,i) << endl;
         R_report   << endl;
+      }
+    }
+    for (k=1;k<=nfsh;k++)
+    {
+      if (nyrs_fsh_age(k)>0) 
+      { 
         R_report << "$phat_fsh_"<< (k) <<""<< endl;
         for (i=1;i<=nyrs_fsh_age(k);i++) 
           R_report << yrs_fsh_age(k,i)<< " "<< eac_fsh(k,i) << endl;
@@ -4665,9 +4739,17 @@ FUNCTION Write_R
           R_report << yrs_ind_age(k,i)<< " "<< oac_ind(k,i) << endl;
           R_report   << endl;
       }
-    }
-    for (k=1;k<=nind;k++)
-    {
+      if (nyrs_ind_length(k)>0) 
+      { 
+        R_report << "$pobs_len_ind_"<< (k) <<""<< endl;
+        for (i=1;i<=nyrs_ind_length(k);i++) 
+          R_report << yrs_ind_length(k,i)<< " "<< olc_ind(k,i) << endl;
+        R_report   << endl;
+        R_report << "$phat_len_ind_"<< (k) <<""<< endl;
+        for (i=1;i<=nyrs_ind_length(k);i++) 
+          R_report << yrs_ind_length(k,i)<< " "<< elc_ind(k,i) << endl;
+        R_report   << endl;
+      } 
       if (nyrs_ind_age(k)>0) 
       { 
         R_report << "$phat_ind_"<<(k)<<""<<  endl;
@@ -4736,6 +4818,8 @@ FUNCTION Write_R
     R_report   << endl;
 
     R_report   << endl<<"$Like_Comp" <<endl;
+    obj_comps(13)= obj_fun - sum(obj_comps) ; // Residual 
+    obj_comps(14)= obj_fun ;                  // Total
     R_report   <<obj_comps<<endl;
     R_report   << endl;
     R_report   << endl<<"$Like_Comp_names" <<endl;
@@ -4745,6 +4829,7 @@ FUNCTION Write_R
              <<"sel_like_fsh     "<<endl
              <<"ind_like        "<<endl
              <<"age_like_ind     "<<endl
+               <<"length_like_ind  "<<endl
              <<"sel_like_ind     "<<endl
              <<"rec_like         "<<endl
              <<"fpen             "<<endl
@@ -4806,7 +4891,7 @@ FUNCTION Write_R
              R_report   << endl;
     R_report << "$Mest"<<endl;
     R_report << " "<< post_priors(1)
-             << " "<< M
+             << " "<< Mest
              << " "<< natmortprior
              << " "<< cvnatmortprior <<endl;
     R_report   << endl;
@@ -5000,13 +5085,15 @@ FUNCTION Write_R
             endl ;
   }
 
+  R_report<<"$age2len"<<endl; 
+  R_report<<P_age2len<<endl;
   R_report<<"$msy_m0"<<endl; 
   sel_tmp.initialize();
   // NOTE Danger here
-  dvar_vector mtmp = natmort;
-  natmort = natmort(styr);
+  dvar_matrix mtmp = M;
   for (i=styr;i<=endyr;i++) 
   { 
+    M(i) = M(styr);
     sumF=0.;
     for (k=1;k<=nfsh;k++)
     {
@@ -5037,7 +5124,9 @@ FUNCTION Write_R
             endl ;
   }
 
-  natmort = mtmp;
+  M = mtmp;
+  R_Report(F40_est);
+  R_Report(F35_est);
 
   R_report.close();
 
