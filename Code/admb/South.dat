@@ -3,10 +3,12 @@
 2012	#	Last	year																																							
 1	#	First	age																																							
 12	#	Last	age																																							
-10	#	First	length																																							
-50	#	Last	length	41																																						
-1	#	bin																																								
+# 10	#	First	length																																							
+# 50	#	Last	length	41																																						
+# 1	#	bin																																								
 41	#	numbers	of	length	intervals																																					
+#Length bin
+10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50
 #	Number	of	fisheries																																							
 3																																										
 #	Names	of	fisheries																																							
@@ -325,6 +327,14 @@ Chile_AcousCS%Chile_AcousN%Chile_CPUE%DEPM%Chinese_CPUE%EU_CPUE%USSR_CPUE
 0																																										
 0																																										
 6																																										
+0																																										
+0																																										
+0																																										
+#	Number	of	Index	length	data																																					
+0
+0																																										
+0																																										
+0
 0																																										
 0																																										
 0																																										
