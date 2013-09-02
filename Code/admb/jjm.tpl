@@ -54,7 +54,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 DATA_SECTION
-  !!version_info+="Amak.1;July_2012";
+  !!version_info+="SPRFMO_Jack_Mackerel;August_2013";
   int iseed 
   !! iseed=1313;
   int cmp_no // candidate management procedure
@@ -125,7 +125,6 @@ DATA_SECTION
   !! log_input(endyr);
   !! log_input(rec_age);
   !! log_input(oldest_age);
-
 //------------LENGTH INTERVALS
   init_int nlength
   init_vector len_bins(1,nlength)
@@ -255,7 +254,7 @@ DATA_SECTION
   init_ivector nyrs_ind_age(1,nind)               //Number of years of index value (annual)
   !! log_input(nyrs_ind_age);
 
-  init_ivector nyrs_ind_length(1,nfsh)
+  init_ivector nyrs_ind_length(1,nind)
   !! log_input(nyrs_ind_length);
 
   init_imatrix yrs_ind_age_in(1,nind,1,nyrs_ind_age)  //Years of index value (annual)
@@ -270,10 +269,9 @@ DATA_SECTION
   init_matrix n_sample_ind_length_in(1,nind,1,nyrs_ind_length)         //Years of index lengths (annual)
   !! log_input(n_sample_ind_length_in);
 
-  init_3darray oac_ind_in(1,nind,1,nyrs_ind_age,1,nages)  //values of Index proportions at age
-  init_3darray olc_ind_in(1,nind,1,nyrs_ind_length,1,nlength)
+  init_3darray oac_ind_in(1,nind,1,nyrs_ind_age,1,nages);  //values of Index proportions at age
+  init_3darray olc_ind_in(1,nind,1,nyrs_ind_length,1,nlength);
   !! log_input(olc_ind_in);
-
 
   !! log_input(oac_ind_in);
   init_3darray  wt_ind(1,nind,styr,endyr,1,nages)      //values of Index proportions at age

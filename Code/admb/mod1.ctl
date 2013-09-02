@@ -29,6 +29,12 @@ Model_0.5
 0.09 0.1	-4																																									
 #Natural_Mortality 
 0.23 0.05 -4   # average between 0.23 and 0.33
+# NEW npars_mage
+0
+# NEW Mage_in
+
+# phase_Mage
+-5
 #Phase_Random_walk_M 
 -4
 #Nyrs_Random_walk_M 

@@ -256,7 +256,7 @@ DATA_SECTION
   init_ivector nyrs_ind_age(1,nind)               //Number of years of index value (annual)
   !! log_input(nyrs_ind_age);
 
-  init_ivector nyrs_ind_length(1,nfsh)
+  init_ivector nyrs_ind_length(1,nind)
   !! log_input(nyrs_ind_length);
 
   init_imatrix yrs_ind_age_in(1,nind,1,nyrs_ind_age)  //Years of index value (annual)
