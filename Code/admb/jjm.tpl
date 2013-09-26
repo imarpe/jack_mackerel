@@ -1782,10 +1782,10 @@ FUNCTION Get_Selectivity
 
 FUNCTION Get_NatMortality
   natmort = Mest;
+  M(styr) = Mest;
   // Age varying part
   if (npars_Mage>0 && (active(Mest) || active(Mage_offset)))
   {
-    M(styr) = Mest;
     int jj=1;
     for (j=1;j<=nages;j++)
     {

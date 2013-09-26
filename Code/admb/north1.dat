@@ -4,10 +4,12 @@
 2012	#	Last	year																																								
 1	#	First	age	(changed	to	1	yrs	old!)																																			
 12	#	Last	age																																								
-10	#	First	length																																								
-50	#	Last	length	41																																							
-1	#	bin																																									
+# 10	#	First	length																																								
+# 50	#	Last	length	41																																							
+# 1	#	bin																																									
 41	#	numbers	of	length	intervals																																						
+#Length bin
+10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50
 #	Number	of	fisheries																																								
 1																																											
 #	Names	of	fisheries																																								
@@ -137,6 +139,9 @@ Peru_Acoustic%Peru_CPUE
 #	CPUE	Std	Errors	(20%	CV)																																						
 39.44632976	48.4513551	50.4036633	38.39300726	49.60681178	50.62488818	46.17032714	28.863907	48.05655004	48.74019752																																		
 #	Number	of	Index	age	data																																						
+0																																											
+0																																											
+#	Number	of	Index	length	data																																						
 0																																											
 0																																											
 #	Index	age	years																																								
