@@ -4,7 +4,7 @@
 # By: Niels Hintzen
 # Upate: 31 Aug 2011
 #-------------------------------------------------------------------------------
-(list=ls())
+rm(list=ls())
 memory.size(4000)
 
 # Set libraries & source code
@@ -15,22 +15,19 @@ library(doBy)
 
 # Set paths
 # Niels'
-codePath    <- "N:/Projecten/SouthPacific/2012/SWG/R/"
-inputPath   <- "D:/Repository/Dropbox/jurel/Code/"
-outputPath  <- "N:/Projecten/SouthPacific/2012/SWG/Results/"
+reposDir    <- "D:/Repository/JackMackerel/Code/"
+codePath    <- file.path(reposDir,"R/")
+inputPath   <- file.path(reposDir,"admb/")
+outputPath  <- file.path(reposDir,"adbm/")
 
-# Jim's
-codePath    <- "C:/Users/jim/Documents/Dropbox/sprfmo/jurel 2012/Code/Rcode/"
-inputPath   <- "C:/Users/jim/Documents/Dropbox/sprfmo/jurel 2012/Code/"
-outputPath  <- "C:/Users/jim/Documents/Dropbox/sprfmo/jurel 2012/Code/Results/"
 setwd(codePath)
 
 # Specify control file
-controlFile <- "mod6"
+controlFile <- "mod7c"
 getwd()
   # Run the assessment
 source("diagnostics.r")
-source("ADMB2R_15102012.r")
+source("ADMB2R_15102013.r")
 system(paste('"jjm.exe"','-ind',paste(controlFile,".ctr",sep=""),'-nox'), wait = TRUE)
 
   # Read in the output of the assessment
