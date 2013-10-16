@@ -29,6 +29,12 @@ South_and_offshore
 0.09 0.1 -4   
 #Natural_Mortality 
 0.23   0.1   -8   
+# NEW npars_mage
+0
+# NEW Mage_in
+
+# phase_Mage
+-5
 #Phase_Random_walk_M 
 -4
 #Nyrs_Random_walk_M 
@@ -57,7 +63,9 @@ South_and_offshore
 2   2   2   2   2   2   2   
 #q_agemax                    
 10   10   10   10   10   10   10   
+#junk                    
 0.05   
+#n_proj_yrs                    
 10   
 #---------------------------------------------------------
 # Fishery 1 N Chile  
