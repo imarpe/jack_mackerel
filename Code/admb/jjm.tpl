@@ -510,6 +510,10 @@ DATA_SECTION
   matrix sel_sigma_fsh(1,nfsh,1,endyr-styr);
   imatrix yrs_sel_ch_ind(1,nind,1,endyr-styr);
   matrix sel_sigma_ind(1,nind,1,endyr-styr);
+  !! yrs_sel_ch_fsh.initialize();
+  !! yrs_sel_ch_ind.initialize();
+  !! sel_sigma_fsh.initialize();
+  !! sel_sigma_ind.initialize();
 
   // Phase of estimation
   ivector phase_selcoff_fsh(1,nfsh)
@@ -697,7 +701,8 @@ DATA_SECTION
         log_input(n_sel_ch_ind(k));
         log_input(sel_change_in_ind(k));
         log_input(n_sel_ch_ind(k));
-        log_input(yrs_sel_ch_ind(k)(1,n_sel_ch_ind(k)));
+        // log_input(yrs_sel_ch_ind(k)(1,n_sel_ch_ind(k)));
+        log_input(yrs_sel_ch_ind(k));
         // This to read in pre-specified selectivity values...
         for (j=1;j<=nages;j++) 
           *(ad_comm::global_datafile) >> sel_ind_tmp(j);  
@@ -897,10 +902,16 @@ DATA_SECTION
   {
     catch_bio(k) = catch_bio_in(k)(styr,endyr);
     catch_bio_sd(k) = catch_bio_sd_in(k)(styr,endyr);
-    yrs_fsh_age(k) = yrs_fsh_age_in(k)(1,nyrs_fsh_age(k));
-    n_sample_fsh_age(k) = n_sample_fsh_age_in(k)(1,nyrs_fsh_age(k));
-    yrs_fsh_length(k) = yrs_fsh_length_in(k)(1,nyrs_fsh_length(k));
-    n_sample_fsh_length(k) = n_sample_fsh_length_in(k)(1,nyrs_fsh_length(k));
+    if (nyrs_fsh_age(k))
+    {
+      yrs_fsh_age(k) = yrs_fsh_age_in(k)(1,nyrs_fsh_age(k));
+      n_sample_fsh_age(k) = n_sample_fsh_age_in(k)(1,nyrs_fsh_age(k));
+    }
+    if (nyrs_fsh_length(k))
+    {
+      yrs_fsh_length(k) = yrs_fsh_length_in(k)(1,nyrs_fsh_length(k));
+      n_sample_fsh_length(k) = n_sample_fsh_length_in(k)(1,nyrs_fsh_length(k));
+    }
     for (int i=1;i<=nyrs_fsh_age(k);i++)
       oac_fsh(k,i) = oac_fsh_in(k,i) ;
     for (int i=1;i<=nyrs_fsh_length(k);i++)
@@ -916,10 +927,16 @@ DATA_SECTION
     obs_ind(k)  = obs_ind_in(k)(1,nyrs_ind(k));
     obs_se_ind(k)  = obs_se_ind_in(k)(1,nyrs_ind(k));
 
-    yrs_ind_age(k) = yrs_ind_age_in(k)(1,nyrs_ind_age(k));
-    n_sample_ind_age(k) = n_sample_ind_age_in(k)(1,nyrs_ind_age(k));
-    yrs_ind_length(k) = yrs_ind_length_in(k)(1,nyrs_ind_length(k));
-    n_sample_ind_length(k) = n_sample_ind_length_in(k)(1,nyrs_ind_length(k));
+    if (nyrs_ind_age(k)>0)
+    {
+      yrs_ind_age(k) = yrs_ind_age_in(k)(1,nyrs_ind_age(k));
+      n_sample_ind_age(k) = n_sample_ind_age_in(k)(1,nyrs_ind_age(k));
+    }
+    if (nyrs_ind_length(k)>0)
+    {
+      yrs_ind_length(k) = yrs_ind_length_in(k)(1,nyrs_ind_length(k));
+      n_sample_ind_length(k) = n_sample_ind_length_in(k)(1,nyrs_ind_length(k));
+  }
     for (int i=1;i<=nyrs_ind_age(k);i++)
       oac_ind(k,i) = oac_ind_in(k,i) ;
     for (int i=1;i<=nyrs_ind_length(k);i++)

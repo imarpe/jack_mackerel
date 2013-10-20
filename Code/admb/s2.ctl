@@ -18,7 +18,7 @@ South_and_offshore
 #SigmaR 
 0.6   0.2   7   
 #yrs_sr 
-1977   2010   
+1977   2011   
 #Linf
 76.464 0.1 -4   
 #K
