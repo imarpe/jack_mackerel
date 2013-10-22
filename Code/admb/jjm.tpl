@@ -4737,7 +4737,7 @@ FUNCTION Write_R
 
         R_report << "$sdnr_age_fsh_"<< (k) <<""<< endl;
         for (i=1;i<=nyrs_fsh_age(k);i++) 
-          R_report << yrs_fsh_age(k,i)<< " "<< sdnr( eac_fsh(k,i),oac_fsh(k,i),n_sample_fsh_age(k,ii)) << endl;
+          R_report << yrs_fsh_age(k,i)<< " "<< sdnr( eac_fsh(k,i),oac_fsh(k,i),n_sample_fsh_age(k,i)) << endl;
         R_report   << endl;
       }
       if (nyrs_fsh_length(k)>0) 
@@ -4754,7 +4754,7 @@ FUNCTION Write_R
 
         R_report << "$sdnr_length_fsh_"<< (k) <<""<< endl;
         for (i=1;i<=nyrs_fsh_length(k);i++) 
-          R_report << yrs_fsh_age(k,i)<< " "<< sdnr( elc_fsh(k,i),olc_fsh(k,i),n_sample_fsh_length(k,ii)) << endl;
+          R_report << yrs_fsh_length(k,i)<< " "<< sdnr( elc_fsh(k,i),olc_fsh(k,i),n_sample_fsh_length(k,i)) << endl;
         R_report   << endl;
       }
     }
@@ -4774,7 +4774,7 @@ FUNCTION Write_R
 
         R_report << "$sdnr_age_ind_"<< (k) <<""<< endl;
         for (i=1;i<=nyrs_ind_age(k);i++) 
-          R_report << yrs_ind_age(k,i)<< " "<< sdnr( eac_ind(k,i),oac_ind(k,i),n_sample_ind_age(k,ii)) << endl;
+          R_report << yrs_ind_age(k,i)<< " "<< sdnr( eac_ind(k,i),oac_ind(k,i),n_sample_ind_age(k,i)) << endl;
         R_report   << endl;
       }
       if (nyrs_ind_length(k)>0) 
@@ -4787,6 +4787,11 @@ FUNCTION Write_R
         for (i=1;i<=nyrs_ind_length(k);i++) 
           R_report << yrs_ind_length(k,i)<< " "<< elc_ind(k,i) << endl;
         R_report   << endl;
+        R_report << "$sdnr_length_ind_"<< (k) <<""<< endl;
+        for (i=1;i<=nyrs_ind_length(k);i++) 
+          R_report << yrs_ind_length(k,i)<< " "<< sdnr( eac_ind(k,i),oac_ind(k,i),n_sample_ind_length(k,i)) << endl;
+        R_report   << endl;
+
       } 
     }
     for (k=1;k<=nfsh;k++)
