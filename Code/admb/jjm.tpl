@@ -4700,7 +4700,13 @@ FUNCTION Write_R
         {
           if (yrs_ind(k,ii)==i)
           {
-            R_report << i<< " "<< obs_ind(k,ii) << " "<< pred_ind(k,ii) <<" "<< obs_se_ind(k,ii) <<endl; //values of survey index value (annual)
+            double PearsResid   =  value((obs_ind(k,ii)-pred_ind(k,ii))/obs_se_ind(k,ii) );
+            double lnPearsResid =  value((log(obs_ind(k,ii))-log(pred_ind(k,ii)))/obs_lse_ind(k,ii) );
+            R_report << i<< " "<< obs_ind(k,ii)   <<" "<< 
+                                  pred_ind(k,ii)  <<" "<< 
+                                  obs_se_ind(k,ii)<<" "<<  
+                                  PearsResid      <<" "<<
+                                  lnPearsResid    << endl; //values of survey index value (annual)
             ii++;
           }
           // else
@@ -5277,4 +5283,14 @@ FUNCTION double get_AC(_CONST int& indind)
   actmp = mean( elem_prod( ++res(i1,i2-1) - m1, res(i1+1,i2) - m2)) /
           (sqrt(mean( square(res(i1,i2-1) - m1 )))  * sqrt(mean(square(res(i1+1,i2) - m2 ))) );
   return(actmp);
+  
+FUNCTION double sdnr(const dvar_vector& pred,const dvector& obs,double m)
+  RETURN_ARRAYS_INCREMENT();
+  double sdnr;
+  dvector pp = value(pred)+0.000001;
+  int ntmp = -obs.indexmin()+obs.indexmax();
+  sdnr = std_dev(elem_div(obs+0.000001-pp,sqrt(elem_prod(pp,(1.-pp))/m)));
+  RETURN_ARRAYS_DECREMENT();
+  return sdnr;
+
 
