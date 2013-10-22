@@ -4719,6 +4719,7 @@ FUNCTION Write_R
       R_report << endl<< "$Index_Q_"<<k<<endl;
       R_report<< q_ind(k) << endl;
     }
+    // R_report <<" SDNR1 "<< wt_srv1*std_dev(elem_div((pred_srv1(yrs_srv1)-obs_srv1_biom),obs_srv1_se))<<endl;
     R_report   << endl;
     for (k=1;k<=nfsh;k++)
     {
@@ -4728,16 +4729,16 @@ FUNCTION Write_R
         for (i=1;i<=nyrs_fsh_age(k);i++) 
           R_report << yrs_fsh_age(k,i)<< " "<< oac_fsh(k,i) << endl;
         R_report   << endl;
-      }
-    }
-    for (k=1;k<=nfsh;k++)
-    {
-      if (nyrs_fsh_age(k)>0) 
-      { 
+
         R_report << "$phat_fsh_"<< (k) <<""<< endl;
         for (i=1;i<=nyrs_fsh_age(k);i++) 
           R_report << yrs_fsh_age(k,i)<< " "<< eac_fsh(k,i) << endl;
           R_report   << endl;
+
+        R_report << "$sdnr_age_fsh_"<< (k) <<""<< endl;
+        for (i=1;i<=nyrs_fsh_age(k);i++) 
+          R_report << yrs_fsh_age(k,i)<< " "<< sdnr( eac_fsh(k,i),oac_fsh(k,i),n_sample_fsh_age(k,ii)) << endl;
+        R_report   << endl;
       }
       if (nyrs_fsh_length(k)>0) 
       { 
@@ -4745,9 +4746,15 @@ FUNCTION Write_R
         for (i=1;i<=nyrs_fsh_length(k);i++) 
           R_report << yrs_fsh_length(k,i)<< " "<< olc_fsh(k,i) << endl;
         R_report   << endl;
+
         R_report << "$phat_len_fsh_"<< (k) <<""<< endl;
         for (i=1;i<=nyrs_fsh_length(k);i++) 
           R_report << yrs_fsh_length(k,i)<< " "<< elc_fsh(k,i) << endl;
+        R_report   << endl;
+
+        R_report << "$sdnr_length_fsh_"<< (k) <<""<< endl;
+        for (i=1;i<=nyrs_fsh_length(k);i++) 
+          R_report << yrs_fsh_age(k,i)<< " "<< sdnr( elc_fsh(k,i),olc_fsh(k,i),n_sample_fsh_length(k,ii)) << endl;
         R_report   << endl;
       }
     }
@@ -4758,7 +4765,17 @@ FUNCTION Write_R
         R_report << "$pobs_ind_"<<(k)<<""<<  endl;
         for (i=1;i<=nyrs_ind_age(k);i++) 
           R_report << yrs_ind_age(k,i)<< " "<< oac_ind(k,i) << endl;
-          R_report   << endl;
+        R_report   << endl;
+        
+        R_report << "$phat_ind_"<<(k)<<""<<  endl;
+        for (i=1;i<=nyrs_ind_age(k);i++) 
+          R_report << yrs_ind_age(k,i)<< " "<< eac_ind(k,i) << endl;
+        R_report   << endl;
+
+        R_report << "$sdnr_age_ind_"<< (k) <<""<< endl;
+        for (i=1;i<=nyrs_ind_age(k);i++) 
+          R_report << yrs_ind_age(k,i)<< " "<< sdnr( eac_ind(k,i),oac_ind(k,i),n_sample_ind_age(k,ii)) << endl;
+        R_report   << endl;
       }
       if (nyrs_ind_length(k)>0) 
       { 
@@ -4771,13 +4788,6 @@ FUNCTION Write_R
           R_report << yrs_ind_length(k,i)<< " "<< elc_ind(k,i) << endl;
         R_report   << endl;
       } 
-      if (nyrs_ind_age(k)>0) 
-      { 
-        R_report << "$phat_ind_"<<(k)<<""<<  endl;
-        for (i=1;i<=nyrs_ind_age(k);i++) 
-          R_report << yrs_ind_age(k,i)<< " "<< eac_ind(k,i) << endl;
-          R_report   << endl;
-      }
     }
     for (k=1;k<=nfsh;k++)
     {
@@ -5283,7 +5293,7 @@ FUNCTION double get_AC(_CONST int& indind)
   actmp = mean( elem_prod( ++res(i1,i2-1) - m1, res(i1+1,i2) - m2)) /
           (sqrt(mean( square(res(i1,i2-1) - m1 )))  * sqrt(mean(square(res(i1+1,i2) - m2 ))) );
   return(actmp);
-  
+
 FUNCTION double sdnr(const dvar_vector& pred,const dvector& obs,double m)
   RETURN_ARRAYS_INCREMENT();
   double sdnr;
