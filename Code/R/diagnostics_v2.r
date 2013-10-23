@@ -260,7 +260,7 @@ if("input" %in% what){
     for(iFleet in unique(tot$fleet)){
       pic <- levelplot(data ~ length*year | fleet,data=subset(tot,fleet==iFleet),as.table=T,
                 col.regions=cols,cuts=10,
-                main=paste("Length composition in surveys",iFleet),
+                main=paste("Length composition in fleet",iFleet),
                 zlab="",ylab="",colorkey=T)
       print(pic)
     }
@@ -598,7 +598,7 @@ if("fit" %in% what){
     }
     res <- createDataFrame(jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,-1],jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1],c("obs","model","sd","stdres","lstdres"))
     res$class <- ac(res$class)
-    res$data <- res$data/max(res$data,na.rm=T)
+    res$data <- res$data/max(subset(res,class %in% c("model","obs","sd"))$data,na.rm=T)
     resSort <- rbind(res,addToDF)
     resSort <- orderBy(~year+class,data=resSort)
     if(iSurvey == 1) tot <- cbind(resSort,rep(jjm.out$Index_names[iSurvey,1],nrow(resSort)))
@@ -623,10 +623,10 @@ if("fit" %in% what){
   ikey$points$col=c("grey","white")
   ikey$points$cex=0.9
 
-  pic <- xyplot(data~year|as.factor(surveys),data=res,
+  pic <- xyplot(data~year|as.factor(surveys),data=subset(res,classing %in% c("obs","model","sd")),
         groups=classing,
-        main="Predicted and observed indices",xlab="Years",ylab="Index value",
-        key=ikey,ylim=c(0,2),
+        main="Predicted and observed indices",xlab="Years",ylab="Normalized index value",
+        key=ikey,ylim=c(-0.2,2),
         panel=function(...){
           tmp   <- list(...)
           first <- which(tmp$groups[1:length(tmp$x)] == "model")
@@ -637,7 +637,7 @@ if("fit" %in% what){
           panel.points(tmp$x[second],tmp$y[second],col="grey",pch=19,cex=0.6)
           panel.segments(tmp$x[third],c(tmp$y[second]+1.96*tmp$y[third]),tmp$x[third],c(tmp$y[second]-1.96*tmp$y[third]))
           panel.lines(tmp$x[first],tmp$y[first],col="black",lwd=3)
-        },scales=list(alternating=3))
+        },scales=list(alternating=3,y=list(draw=F)))
   print(pic)
 
   # 16: Log residuals in survey
@@ -1027,9 +1027,9 @@ if("fit" %in% what){
   print(pic)
   
   # 22b Uncertainties of key parameters
-  res <- rbind(data.frame(CV=jjm.out$SSB[,3],years=jjm.out$SSB[,1],class="SSB"),
-               data.frame(CV=jjm.out$TotBiom[,3],years=jjm.out$TotBiom[,1],class="TSB"),
-               data.frame(CV=jjm.out$R[,3],years=jjm.out$R[,1],class="R"))
+  res <- rbind(data.frame(CV=jjm.out$SSB[,3]/jjm.out$SSB[,2],years=jjm.out$SSB[,1],class="SSB"),
+               data.frame(CV=jjm.out$TotBiom[,3]/jjm.out$TotBiom[,2],years=jjm.out$TotBiom[,1],class="TSB"),
+               data.frame(CV=jjm.out$R[,3]/jjm.out$R[,2],years=jjm.out$R[,1],class="R"))
 
   pic <- xyplot(CV ~ years,data=res,groups=class,
                 auto.key=list(space="right",points=FALSE,lines=F,type="l",col=1:3),
