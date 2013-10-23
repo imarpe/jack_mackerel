@@ -1,4 +1,4 @@
-compareTime <- function(lstOuts,Slot,SD=F,Sum=NULL,startYear=1970){
+compareTime <- function(lstOuts,Slot,SD=F,Sum=NULL,startYear=NULL,legendPos="topright"){
 
   dat     <- lapply(lstOuts,function(x){return(x[[Slot]])})
   nms     <- names(dat); if(!is.null(Sum)){nms <- c(nms,paste(Sum[1],"+",Sum[2],sep=""))}
@@ -29,12 +29,12 @@ compareTime <- function(lstOuts,Slot,SD=F,Sum=NULL,startYear=1970){
               y=c(dat[[i]][,4],rev(dat[[i]][,5])),col=iCol,border=0)
     }
   }
-  legend("topleft",legend=c(nms),col=1:length(nms),lwd=2,lty=1,box.lty=0)
+  legend(legendPos,legend=c(nms),col=1:length(nms),lwd=2,lty=1,box.lty=0)
   box()
 
 }
 
-compareTimes <- function(lstOuts,Slots,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=1970){
+compareTimes <- function(lstOuts,Slots,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=NULL,legendPos="topright"){
 
   nD          <- length(lstOuts)
   idxD        <- as.list(rep(numeric(1),nD))
@@ -91,12 +91,12 @@ compareTimes <- function(lstOuts,Slots,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,start
               y=c(dat[[i]][,4],rev(dat[[i]][,5])),col=iCol,border=0)
     }
   }
-  legend("topleft",legend=c(nms),col=1:length(nms),lwd=2,lty=1,box.lty=0)
+  legend(legendPos,legend=c(nms),col=1:length(nms),lwd=2,lty=1,box.lty=0)
   box()
 
 }
 
-compareMatrix <- function(lstOuts,Slot,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=1970){
+compareMatrix <- function(lstOuts,Slot,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=NULL,legendPos="topright"){
 
   dat     <- lapply(lstOuts,function(x){return(x[[Slot]])})
   nms     <- names(dat); if(!is.null(Sum)){nms <- c(nms,paste(Sum[1],"+",Sum[2],sep=""))}
@@ -142,6 +142,6 @@ compareMatrix <- function(lstOuts,Slot,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,start
               y=c(dat[[i]][,4],rev(dat[[i]][,5])),col=iCol,border=0)
     }
   }
-  legend("topleft",legend=c(nms),col=1:length(nms),lwd=2,lty=1,box.lty=0)
+  legend(legendPos,legend=c(nms),col=1:length(nms),lwd=2,lty=1,box.lty=0)
   box()
 }
