@@ -1409,7 +1409,6 @@ PRELIMINARY_CALCS_SECTION
     M(i) = M(i-1);
   log_input(M);
   Get_Age2length();
-
 INITIALIZATION_SECTION
   Mest natmortprior; 
   steepness steepnessprior
@@ -1495,7 +1494,6 @@ PROCEDURE_SECTION
   }
   if (do_fmort) Profile_F();
  //+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==
-
 FUNCTION write_mceval
   if (mcmcmode != 3)
     write_mceval_hdr();
@@ -1531,7 +1529,6 @@ FUNCTION write_mceval
   catch_future(2,styr_fut)    << " "<<  
   catch_future(3,styr_fut)    << " "<<  
   catch_future(4,styr_fut)    << " "<<  endl;
-
 //-----TRANSFORMATION FUNCION AGE->LENGTH--------------------------------------------------
 FUNCTION Get_Age2length
  // This subroutine allows convert an age composition to length composition. For example: if there is a matrix C(1,nyears,1,nages), 
@@ -1554,7 +1551,6 @@ FUNCTION Get_Age2length
     mu_age(i) = Linf*(1.-exp(-k_coeff))+exp(-k_coeff)*mu_age(i-1); // the mean length by age group
   sigma_age=sdage*mu_age; // standard deviation of length-at-age
   P_age2len = ALK( mu_age, sigma_age, len_bins);
-
 FUNCTION dvar_matrix ALK(dvar_vector& mu, dvar_vector& sig, dvector& x)
 	//RETURN_ARRAYS_INCREMENT();
 	int i, j;
@@ -1579,10 +1575,7 @@ FUNCTION dvar_matrix ALK(dvar_vector& mu, dvar_vector& sig, dvector& x)
 	}//end nage
 	//RETURN_ARRAYS_DECREMENT();
 	return(pdf);
-
 //---------------------------------------------------------------------------
-
-
 FUNCTION Get_Replacement_Yield
   // compute next year's yield and SSB and add penalty to ensure F gives same SSB... 
   dvar_vector ntmp(1,nages);
@@ -2118,7 +2111,6 @@ FUNCTION evaluate_the_objective_function
   obj_comps(11) = sum(post_priors_indq);
   obj_comps(12) = sum(post_priors);
   obj_fun     += sum(obj_comps);
-
 FUNCTION Cat_Like
   // Eases into the catch-biomass likelihoods.  If too far off to start, full constraint to fit can be too aggressive
   catch_like.initialize();
@@ -2158,7 +2150,6 @@ FUNCTION Cat_Like
   }
 
   catch_like *= catch_pen;
-
 FUNCTION Rec_Like
   rec_like.initialize();
   if (active(rec_dev))
@@ -2206,7 +2197,6 @@ FUNCTION Rec_Like
       rec_like(3) += norm2(rec_dev_future)/(2*square(sigmar_fut))+ size_count(rec_dev_future)*log(sigmar_fut);
     }
   }
-
 FUNCTION Compute_priors
   post_priors.initialize();
   post_priors_indq.initialize();
@@ -2240,8 +2230,6 @@ FUNCTION Compute_priors
 
   if (active(log_sigmar))
     post_priors(3) += square(log(sigmar/sigmarprior))/(2*cvsigmarprior*cvsigmarprior); 
-
-
 //--------------------------NEW------------------------------------
   if (active(log_Linf))
     post_priors(4) += square(log_Linf-log_Linfprior)/(2*cvLinfprior*cvLinfprior); 
@@ -2254,7 +2242,6 @@ FUNCTION Compute_priors
 
   if (active(log_sdage))
     post_priors(7) += square(log_sdage-log_sdageprior)/(2*cvsdageprior*cvsdageprior); 
-
 FUNCTION Fmort_Pen
   // Phases less than 3, penalize High F's---------------------------------
   if (current_phase()<3)
@@ -2263,7 +2250,6 @@ FUNCTION Fmort_Pen
     fpen(1) += 0.0001*norm2(F - .2); 
 
   // for (k=1;k<=nfsh;k++)  fpen(2) += 20.*square(mean(fmort_dev(k)) ); // this is just a normalizing constraint (fmort_devs sum to zero) }
-    
 FUNCTION Sel_Like 
   sel_like_fsh.initialize();
   sel_like_ind.initialize();
@@ -2340,7 +2326,6 @@ FUNCTION Sel_Like
       }
     }
   }
-
 FUNCTION Srv_Like
   // Fit to indices (log-Normal) -------------------------------------------
   ind_like.initialize();
@@ -2357,14 +2342,12 @@ FUNCTION Srv_Like
       ind_like(k) += square(obs_ind(k,i) - pred_ind(k,yrs_ind(k,i)) ) / 
                                    (2.*obs_se_ind(k,i)*obs_se_ind(k,i));
   */
-
 FUNCTION Age_Like
   age_like_fsh.initialize();
   for (k=1;k<=nfsh;k++)
     for (int i=1;i<=nyrs_fsh_age(k);i++)
       age_like_fsh(k) -= n_sample_fsh_age(k,i)*(oac_fsh(k,i) + 0.001) * log(eac_fsh(k,i) + 0.001 ) ;
   age_like_fsh -= offset_fsh;
-
 //-----------------------------------NEW-----------------------
   length_like_fsh.initialize();
   for (k=1;k<=nfsh;k++)
@@ -2383,7 +2366,6 @@ FUNCTION Age_Like
     for (int i=1;i<=nyrs_ind_age(k);i++)
       age_like_ind(k) -= n_sample_ind_age(k,i)*(oac_ind(k,i) + 0.001) * log(eac_ind(k,i) + 0.001 ) ;
   age_like_ind -= offset_ind;
-
 FUNCTION Oper_Model
  // Initialize things used here only
   mc_count++;
@@ -2499,7 +2481,6 @@ FUNCTION Oper_Model
   SaveOM.close();
   if (!mceval_phase())
     exit(1);
-
 FUNCTION void get_future_Fs(const int& i,const int& iscenario)
     f_tmp.initialize();
     dvar_matrix F_fut_tmp(1,nfsh,1,nages);
@@ -2509,7 +2490,7 @@ FUNCTION void get_future_Fs(const int& i,const int& iscenario)
       case 1:
         // f_tmp = F35;
         // cout<< "F "<<f_tmp<<endl;
-        // for (int k=1;k<=nfsh;k++) f_tmp(k) = SolveF2(endyr,nage_future(i), 1.0  * catch_lastyr(k));
+        for (int k=1;k<=nfsh;k++) f_tmp(k) = SolveF2(endyr,nage_future(i), 1.0  * catch_lastyr(k));
         break;
       case 2:
         // f_tmp = SolveF2(endyr,nage_future(i), .75  * catch_lastyr );
