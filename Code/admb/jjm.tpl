@@ -203,6 +203,7 @@ DATA_SECTION
   init_3darray olc_fsh_in(1,nfsh,1,nyrs_fsh_length,1,nlength)
   !! log_input(olc_fsh_in);
   init_3darray wt_fsh(1,nfsh,styr,endyr,1,nages)  //values of weights at age
+  !! log_input(wt_fsh);
 
 //  Define indices
   init_int nind                                   //number of indices
@@ -5303,7 +5304,6 @@ FUNCTION double sdnr(const dvar_vector& pred,const dvector& obs,double m)
   RETURN_ARRAYS_INCREMENT();
   double sdnr;
   dvector pp = value(pred)+0.000001;
-  int ntmp = -obs.indexmin()+obs.indexmax();
   sdnr = std_dev(elem_div(obs+0.000001-pp,sqrt(elem_prod(pp,(1.-pp))/m)));
   RETURN_ARRAYS_DECREMENT();
   return sdnr;
