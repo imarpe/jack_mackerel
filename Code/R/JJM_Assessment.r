@@ -17,6 +17,7 @@ library(doBy)
 # Set paths
 #-------------------------------------------------------------------------------
 reposDir    <- "D:/Repository/JackMackerel/"
+reposDir    <- "c:/users/jim/documents/_mymods/jjm/"
 codePath    <- file.path(reposDir,"Code/R/")
 inputPath   <- file.path(reposDir,"Code/admb/")
 outputPath  <- file.path(reposDir,"Code/admb/arc/")
@@ -54,6 +55,25 @@ writeList(setOutputNames(jjm.out),fname=paste(controlFile,"_out.txt",sep=""),for
 # Visual compare runs
 #-------------------------------------------------------------------------------
 source("compareRuns.r")
+getwd()
+jjm0.0 <- readList(file.path(inputPath,paste("arc/Mod0.0_r.rep",sep="")))
+jjm0.1 <- readList(file.path(inputPath,paste("arc/Mod0.1_r.rep",sep="")))
+jjm0.2 <- readList(file.path(inputPath,paste("arc/Mod0.2_r.rep",sep="")))
+jjm0.3 <- readList(file.path(inputPath,paste("arc/Mod0.3_r.rep",sep="")))
+jjm0.4 <- readList(file.path(inputPath,paste("arc/Mod0.4_r.rep",sep="")))
+jjm0.5 <- readList(file.path(inputPath,paste("arc/Mod0.5_r.rep",sep="")))
+lstOuts   <- list(
+  Model_0.0= jjm0.0,
+  Model_0.1= jjm0.1,
+  Model_0.2= jjm0.2,
+  Model_0.3= jjm0.3,
+  Model_0.4= jjm0.4,
+  Model_0.5= jjm0.5
+                  )
+
+
+
+
 pdf(paste(outputPath,"Compare_1_4.pdf",sep=""),height=29.7/2.54,width=21/2.54,pointsize = 24, bg = "white")
 
 jjm.mod7  <- readList(file.path(outputPath,"mod7_r.rep"))
@@ -81,7 +101,7 @@ dev.off()
 
 # Likelihood table
 tab       <- cbind(lstOuts[[1]]$Like_Comp_names,do.call(cbind,lapply(lstOuts,function(x){round(x[["Like_Comp"]],2)})))
-write.csv(tab,file=file.path(inputPath,"LikelihoodTable2012.csv"),row.names=F)
+write.csv(tab,file=file.path(inputPath,"LikelihoodTable2013.csv"),row.names=F)
 
 # Risk tables
 jjm.mod7  <- readList(file.path(inputPath,"mod7_r.rep"))
