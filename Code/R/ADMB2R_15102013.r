@@ -54,11 +54,11 @@ read.dat <- function(iFilename,iPath){
 
                 #- Get some initial dimensions
                 nY        <- length(an(unlist(res1[[1]][1])):an(unlist(res1[[2]][1]))) #number of years
-                Ys        <- an(unlist(res1[1:2])) #Years
+                Ys        <- na.omit(an(unlist(res1[1:2]))) #Years
                 nA        <- length(an(unlist(res1[[3]][1])):an(unlist(res1[[4]][1]))) #number of ages
-                As        <- an(unlist(res1[3:4])) #Ages
+                As        <- na.omit(an(unlist(res1[3:4]))) #Ages
                 nL        <- na.omit(an(unlist(res1[[5]]))) #number of lengths
-                Ls        <- an(unlist(strsplit(res1[[6]],"  "))) #Lengths
+                Ls        <- na.omit(an(unlist(strsplit(res1[[6]],"  ")))) #Lengths
                 nF        <- na.omit(an(unlist(res1[[7]]))) #number of fisheries
 
                 #- Define storage object
@@ -68,11 +68,11 @@ read.dat <- function(iFilename,iPath){
 
                 #-Common data
                 cols$years                =matrix(NA,ncol=2,nrow=1 ,dimnames=list("years",c("first year","last year")))
-                cols$years[]                          <- an(unlist(res1[1:2]))
+                cols$years[]                          <- na.omit(an(unlist(res1[1:2])))
                 cols$ages                 =matrix(NA,ncol=2,nrow=1 ,dimnames=list("age",c("age recruit","oldest age")))
-                cols$ages[]                           <- an(unlist(res1[3:4]))
+                cols$ages[]                           <- na.omit(an(unlist(res1[3:4])))
                 cols$lengths              =matrix(NA,ncol=2,nrow=1 ,dimnames=list("lengths",c("first length","last length")))
-                cols$lengths[]                        <- c(min(Ls),max(Ls))
+                cols$lengths[]                        <- na.omit(c(min(Ls),max(Ls)))
                 cols$lengthbin            =numeric()
                 #cols$lengthbin                        <- an(unlist(res1[7]))
 

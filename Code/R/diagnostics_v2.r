@@ -593,10 +593,10 @@ if("fit" %in% what){
   for(iSurvey in 1:Nsurveys){
     if(any(jjm.out$Yr %in% jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1]==T)){
       addToDF <- jjm.out$Yr[which(!jjm.out$Yr %in% jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1])]
-      addToDF <- as.data.frame(rbind(cbind(addToDF,NA,"model"),cbind(addToDF,NA,"obs"),cbind(addToDF,NA,"sd")))
+      addToDF <- as.data.frame(rbind(cbind(addToDF,NA,"model"),cbind(addToDF,NA,"obs"),cbind(addToDF,NA,"sd"),cbind(addToDF,NA,"stdres"),cbind(addToDF,NA,"lstdres")))
       colnames(addToDF) <- c("year","data","class"); addToDF$year <- an(ac(addToDF$year)); addToDF$data <- an(ac(addToDF$data)); addToDF$class <- as.character(addToDF$class)
     }
-    res <- createDataFrame(jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,-1],jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1],c("obs","model","sd"))
+    res <- createDataFrame(jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,-1],jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1],c("obs","model","sd","stdres","lstdres"))
     res$class <- ac(res$class)
     res$data <- res$data/max(res$data,na.rm=T)
     resSort <- rbind(res,addToDF)
@@ -644,13 +644,13 @@ if("fit" %in% what){
   for(iSurvey in 1:Nsurveys){
     if(any(jjm.out$Yr %in% jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1]==F)){
       addToDF <- jjm.out$Yr[which(!jjm.out$Yr %in% jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1])]
-      addToDF <- data.frame(year=addToDF,obs=NA,model=NA,sd=NA)
-      colnames(addToDF) <- c("year","obs","model","sd"); addToDF$year <- an(ac(addToDF$year))
+      addToDF <- data.frame(year=addToDF,obs=NA,model=NA,sd=NA,stdres=NA,lstdres=NA)
+      colnames(addToDF) <- c("year","obs","model","sd","stdres","lstdres"); addToDF$year <- an(ac(addToDF$year))
     }
 
-    res <- createDataFrame(jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,-1],jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1],c("obs","model","sd"))
-    res <- cbind(subset(res,class=="obs")[,1:2],subset(res,class=="model")$data,subset(res,class=="sd")$data)
-    colnames(res) <- c("year","obs","model","sd")
+    res <- createDataFrame(jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,-1],jjm.out[[paste("Obs_Survey_",iSurvey,sep="")]][,1],c("obs","model","sd","stdres","lstdres"))
+    res <- cbind(subset(res,class=="obs")[,1:2],subset(res,class=="model")$data,subset(res,class=="sd")$data,subset(res,class=="stdres")$data,subset(res,class=="lstdres")$data)
+    colnames(res) <- c("year","obs","model","sd","stdres","lstdres")
     res <- rbind(res,addToDF)
     res <- orderBy(~year,data=res)
     if(iSurvey == 1) tot <- cbind(res,rep(jjm.out$Index_names[iSurvey,1],nrow(res)))
@@ -659,15 +659,13 @@ if("fit" %in% what){
       tot   <- rbind(tot,res2)
     }
   }
-  colnames(tot) <- c("year","obs","model","sd","survey")
+  
+  colnames(tot) <- c("year","obs","model","sd","stdres","lstdres","survey")
   tot           <- tot[duplicated(paste(tot$year,tot$survey)==F),]
   tot$obs[tot$obs<0] <- NA; tot$obs[tot$model<0] <- NA; tot$obs[tot$sd < 0] <- NA
   res <- tot
-
-  resids        <- log(res$obs + 1) - log(res$model + 1)
-  res$resids    <- resids
-    scalar      <- 3/max(abs(resids),na.rm=T)
-  resRange      <- range(resids,na.rm=T)
+    scalar      <- 3/max(abs(res$lstdres),na.rm=T)
+  resRange      <- range(res$lstdres,na.rm=T)
   ikey          <- simpleKey(text=as.character(round(seq(resRange[1],resRange[2],length.out=6),2)),
                              points=T,lines=F,columns = 2)
   ikey$points$cex <- abs(round(seq(resRange[1],resRange[2],length.out=6),2))*scalar
@@ -675,8 +673,8 @@ if("fit" %in% what){
   ikey$points$pch<- ifelse(round(seq(resRange[1],resRange[2],length.out=6),2)>0,19,1)
 
 
-  pic <- xyplot(resids*scalar ~ year | as.factor(survey),data=res,
-         xlab="Years",ylab="Residuals",main="Survey residuals",
+  pic <- xyplot(lstdres*scalar ~ year | as.factor(survey),data=res,
+         xlab="Years",ylab="Log residuals",main="Standardized survey residuals",
          prepanel=function(...) {list(ylim=c(1,1))},
          layout=c(1,Nsurveys),
          type="p",col=cols,lwd=3,
@@ -688,6 +686,35 @@ if("fit" %in% what){
           panel.points(x,1,cex=abs(y),col=ifelse(y>0,"black","white"),pch=19)
           panel.points(x,1,cex=abs(y),col=1,pch=1)
          })
+
+  print(pic)
+  
+  # 16b: standard deviation of time series variances
+  for(iSDnr in names(jjm.out)[grep("sdnr",names(jjm.out))]){
+    dat <- jjm.out[[iSDnr]]
+    if(length(grep("age",iSDnr))>0 &    length(grep("fsh",iSDnr))>0) iName <- paste("SD_age_",jjm.out$Fshry_names[an(substr(iSDnr,nchar(iSDnr),nchar(iSDnr)))],sep="")
+    if(length(grep("length",iSDnr))>0 & length(grep("fsh",iSDnr))>0) iName <- paste("SD_length_",jjm.out$Fshry_names[an(substr(iSDnr,nchar(iSDnr),nchar(iSDnr)))],sep="")
+    if(length(grep("age",iSDnr))>0 &    length(grep("ind",iSDnr))>0) iName <- paste("SD_age_",jjm.out$Index_names[an(substr(iSDnr,nchar(iSDnr),nchar(iSDnr)))],sep="")
+    if(length(grep("length",iSDnr))>0 & length(grep("ind",iSDnr))>0) iName <- paste("SD_length_",jjm.out$Index_names[an(substr(iSDnr,nchar(iSDnr),nchar(iSDnr)))],sep="")
+
+    if(iSDnr == names(jjm.out)[grep("sdnr",names(jjm.out))][1]){
+      totdat <- cbind(dat,iName)
+    } else {
+      totdat <- rbind(totdat,cbind(dat,iName))
+    }
+  }
+  totdat     <- as.data.frame(totdat)
+  colnames(totdat) <- c("year","data","class")
+  totdat$year <- an(ac(totdat$year))
+  totdat$data <- an(ac(totdat$data))
+  res <- totdat
+
+  pic <- xyplot(data ~ year | class,data=res,type="h",
+                panel=function(...){
+                  panel.grid(h=-1,v=-1)
+                  panel.xyplot(...,col=1)
+                },scales=list(alternating=3),
+                main="SD per input series",ylab="SD",xlab="Years")
 
   print(pic)
 
