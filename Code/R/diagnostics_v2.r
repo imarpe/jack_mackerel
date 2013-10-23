@@ -712,6 +712,7 @@ if("fit" %in% what){
   pic <- xyplot(data ~ year | class,data=res,type="h",
                 panel=function(...){
                   panel.grid(h=-1,v=-1)
+                  panel.abline(h=1,col="blue",lty=3)
                   panel.xyplot(...,col=1)
                 },scales=list(alternating=3),
                 main="SD per input series",ylab="SD",xlab="Years")
