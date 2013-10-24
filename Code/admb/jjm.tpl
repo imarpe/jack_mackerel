@@ -314,9 +314,9 @@ DATA_SECTION
   //  1 2 1 2 1 4
   init_imatrix sel_map(1,2,1,nfsh_and_ind) 
   // maps fisheries and indices into sequential sel_map for sharing purposes
-  !! write_input_log<< "# Map shared selectivity: "<< endl;log_input(sel_map);
   !! log_input(datafile_name);
   !! log_input(model_name);
+  !! write_input_log<<"# Map shared selectivity: "<< endl;log_input(sel_map);
   !! projfile_name = cntrlfile_name(1,length(cntrlfile_name)-4) + ".prj";
 
   
@@ -1500,6 +1500,7 @@ FUNCTION write_mceval
   mcmcmode = 3;
   mceval<< model_name         << " "  ;
   mceval<< obj_fun            << " "  ;
+  mceval<< obj_comps          << " "  ;
   // mceval<< rec_dev_future << " "  ;
   // mceval<<endl;
   get_msy();
@@ -1507,7 +1508,7 @@ FUNCTION write_mceval
   Calc_Dependent_Vars();
   mceval<<
   q_ind(1,1)  << " "<< 
-  M         << " "<< 
+  M(endyr,1)  << " "<< 
   steepness << " "<< 
   depletion << " "<< 
   MSY       << " "<< 
