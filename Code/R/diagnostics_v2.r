@@ -22,6 +22,17 @@ diagnostics <- function(jjm.out,jjm.in,jjm.ypr,what){
     lgtFleets <- lgtFleets[seq(4,length(lgtFleets),4)]
   } else { lgtFleets <- 0}
   
+  #- Get the age-structured surveys and length-structured surveys out
+  if(length(grep("pobs_ind_",names(jjm.out)))>0){
+    ageSurveys <- unlist(strsplit(names(jjm.out)[grep("pobs_ind_",names(jjm.out))],"_"))
+    ageSurveys<- ageSurveys[seq(3,length(ageSurveys),3)]
+  } else { ageSurveys <- 0}
+  if(length(grep("pobs_len_ind_",names(jjm.out)))>0){
+    lgtSurveys <- unlist(strsplit(names(jjm.out)[grep("pobs_len_ind_",names(jjm.out))],"_"))
+    lgtSurveys <- lgtSurveys[seq(4,length(lgtSurveys),4)]
+  } else { lgtFleets <- 0}
+
+  
   #- Generic functions to be called in the diagnostics plot
   createDataFrame <- function(data,years,class){
                         dims  <- dim(data)
@@ -639,6 +650,58 @@ if("fit" %in% what){
           panel.lines(tmp$x[first],tmp$y[first],col="black",lwd=3)
         },scales=list(alternating=3,y=list(draw=F)))
   print(pic)
+  
+  # 15b: Fitted age by year by survey
+  if(an(ageSurveys)[1] != 0){
+    for(iSurvey in an(ageSurveys)){
+      obs <- createDataFrame(jjm.out[[paste("pobs_ind_",iSurvey,sep="")]][,-1],jjm.out[[paste("pobs_ind_",iSurvey,sep="")]][,1],ages)
+      mod <- createDataFrame(jjm.out[[paste("phat_ind_",iSurvey,sep="")]][,-1],jjm.out[[paste("phat_ind_",iSurvey,sep="")]][,1],ages)
+      if(iSurvey == an(ageSurveys)[1]){
+        x <- cbind(obs,rep("obs",nrow(obs)),jjm.out$Fshry_names[iSurvey]); colnames(x) <- c("year","data","age","class","survey")
+        y <- cbind(mod,rep("model",nrow(mod)),jjm.out$Fshry_names[iSurvey]);colnames(y) <- c("year","data","age","class","survey")
+        tot <- rbind(x,y)
+      }
+      if(iSurvey != an(ageSurveys)[1]){
+        x <- cbind(obs,rep("obs",nrow(obs)),jjm.out$Fshry_names[iSurvey]); colnames(x) <- c("year","data","age","class","survey")
+        y <- cbind(mod,rep("model",nrow(mod)),jjm.out$Fshry_names[iSurvey]);colnames(y) <- c("year","data","age","class","survey")
+        res <- rbind(x,y)
+        tot <- rbind(tot,res)
+      }
+    }
+    res <- tot
+    res$cohort <- (res$year - res$age) %% length(ages) + 1
+
+    ikey          <- simpleKey(text=c("Observed","Predicted"),
+                               points=T,lines=F,rect=T,columns = 2)
+    ikey$rectangles$alpha=c(1,0)
+    ikey$rectangles$col="white"
+    ikey$rectangles$lty=c(1,0)
+    ikey$points$pch=c(-1,19)
+    ikey$points$col=c("white","black")
+    ikey$points$cex=c(0,1.1)
+
+    cols  <- rainbow(length(ages))
+    for(iSurvey in c(jjm.out$Fshry_names)[an(ageFleets)]){
+      tmpres  <- subset(res,survey==iSurvey)
+    pic <- xyplot(data ~ age | factor(year),data=tmpres,
+            groups=class,
+            xlab="Age",ylab="Proportion at age",main=paste("Age fits",iSurvey),
+            key=ikey,
+            as.table=TRUE,
+            panel=function(x,y){
+              idx     <- mapply(seq,from=seq(1,length(y),length(ages)),to=seq(1,length(y),length(ages))+(length(ages)-1))
+              first   <- c(idx[,seq(1,dim(idx)[2],3)])
+              second  <- c(idx[,seq(2,dim(idx)[2],3)])
+              #cols <- tmpres$cohort[which(is.na(pmatch(tmpres$data,y))==F & is.na(pmatch(tmpres$age,x))==F)]
+              yr      <- names(which.max(table(tmpres$year[which(tmpres$data %in% y)])))
+              colidx  <- tmpres$cohort[which(tmpres$data %in% y & tmpres$year == an(yr))]
+              panel.barchart(x[first],y[first],horizontal=F,origin=0,box.width=1,col=cols[colidx])
+              panel.points(x[second],y[second],pch=19,col=1,cex=0.5)
+              },scales=list(alternating=3))
+    print(pic)
+    }
+  }
+
 
   # 16: Log residuals in survey
   for(iSurvey in 1:Nsurveys){
