@@ -657,13 +657,13 @@ if("fit" %in% what){
       obs <- createDataFrame(jjm.out[[paste("pobs_ind_",iSurvey,sep="")]][,-1],jjm.out[[paste("pobs_ind_",iSurvey,sep="")]][,1],ages)
       mod <- createDataFrame(jjm.out[[paste("phat_ind_",iSurvey,sep="")]][,-1],jjm.out[[paste("phat_ind_",iSurvey,sep="")]][,1],ages)
       if(iSurvey == an(ageSurveys)[1]){
-        x <- cbind(obs,rep("obs",nrow(obs)),jjm.out$Fshry_names[iSurvey]); colnames(x) <- c("year","data","age","class","survey")
-        y <- cbind(mod,rep("model",nrow(mod)),jjm.out$Fshry_names[iSurvey]);colnames(y) <- c("year","data","age","class","survey")
+        x <- cbind(obs,rep("obs",nrow(obs)),jjm.out$Index_names[iSurvey]); colnames(x) <- c("year","data","age","class","survey")
+        y <- cbind(mod,rep("model",nrow(mod)),jjm.out$Index_names[iSurvey]);colnames(y) <- c("year","data","age","class","survey")
         tot <- rbind(x,y)
       }
       if(iSurvey != an(ageSurveys)[1]){
-        x <- cbind(obs,rep("obs",nrow(obs)),jjm.out$Fshry_names[iSurvey]); colnames(x) <- c("year","data","age","class","survey")
-        y <- cbind(mod,rep("model",nrow(mod)),jjm.out$Fshry_names[iSurvey]);colnames(y) <- c("year","data","age","class","survey")
+        x <- cbind(obs,rep("obs",nrow(obs)),jjm.out$Index_names[iSurvey]); colnames(x) <- c("year","data","age","class","survey")
+        y <- cbind(mod,rep("model",nrow(mod)),jjm.out$Index_names[iSurvey]);colnames(y) <- c("year","data","age","class","survey")
         res <- rbind(x,y)
         tot <- rbind(tot,res)
       }
@@ -681,7 +681,7 @@ if("fit" %in% what){
     ikey$points$cex=c(0,1.1)
 
     cols  <- rainbow(length(ages))
-    for(iSurvey in c(jjm.out$Fshry_names)[an(ageFleets)]){
+    for(iSurvey in c(jjm.out$Index_names)[an(ageFleets)]){
       tmpres  <- subset(res,survey==iSurvey)
     pic <- xyplot(data ~ age | factor(year),data=tmpres,
             groups=class,
