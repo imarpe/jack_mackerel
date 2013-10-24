@@ -9,13 +9,13 @@ Model_3.1
 #Sr_type 
 2  
 #AgeError 
-1  
+0  
 #Retro 
 0  
 #Steepness 
 0.8 300 -6  
 #SigmaR 
-1.0 15 -4  
+0.6 15 -4  
 #yrs_sr 
 1970 2011 
 #Linf
