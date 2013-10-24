@@ -1,5 +1,5 @@
 mod1.dat  
-Model_1.1
+Model_1.10
 # Selectivity sharing vector (number_fisheries + number_surveys)  
 #Fsh 1 Fsh_2 Fsh_3 Fsh_4 Srv_1 Srv_2 Srv_3 Srv_4 Srv_5 Srv_6 Srv_7 Srv_8  
 #N_Chile_Fshry CS_Chile_Fishery Peruvian International Chile_AcousCS Chile_AcousN Chilean_CPUE DEPM Acoustic_Peru Peru_CPUE Chinese_CPUE EU_CPUE #  
@@ -9,7 +9,7 @@ Model_1.1
 #Sr_type 
 2  
 #AgeError 
-0  
+1  
 #Retro 
 0  
 #Steepness 
@@ -52,15 +52,17 @@ Model_1.1
 1.2  1.2  1.2  1.2  1.2  1.2  1.2  1.2  1.2  
 -1  -1  -1  -1  -1  -1  -1  -1  -1  
 #Random_walk_q_phases                    
-1  -1  1  -1  -1  -1  -1  -1  -1  
+1  -1  1  -1  1  -1  -1  -1  -1  
 #Nyrs_Random_walk_q
-1  0  1  0  0  0  0  0  0  
+1  0  1  0  2  0  0  0  0  
 #Random_walk_q_yrs blank if nyrs==0
 2002 
 2011
+1994 1997
 #Random_walk_q_sigmas blank if nyrs==0
 2.0
 2.0
+2.0 2.0
 #q_agemin                    
 2  2  2  2  2  2  2  2  2  
 #q_agemax                    
