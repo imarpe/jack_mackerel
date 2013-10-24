@@ -77,14 +77,7 @@ lstOuts   <- list(
   Model_0.6= jjm0.6
 )
 
-
-
-
 pdf(paste(outputPath,"Compare_1_4.pdf",sep=""),height=29.7/2.54,width=21/2.54,pointsize = 24, bg = "white")
-
-jjm.mod7  <- readList(file.path(outputPath,"mod7_r.rep"))
-jjm.mod6  <- readList(file.path(outputPath,"mod6_r.rep"))
-lstOuts   <- list(Model_6=jjm.mod6,Model_7=jjm.mod7)
 
 jjm.n2    <- readList(file.path(outputPath,"n3_r.rep"))
 lstOuts   <- list(Model_N1=jjm.n1,Model_N2=jjm.n2)
@@ -92,7 +85,7 @@ lstOuts   <- list(Model_N1=jjm.n1,Model_N2=jjm.n2)
 jjm.s1    <- readList(file.path(outputPath,"s1_r.rep"))
 jjm.s2    <- readList(file.path(outputPath,"s2_r.rep"))
 lstOuts   <- list(Model_S1=jjm.s1,Model_S2=jjm.s2)
-pdf()
+
 compareTime(lstOuts,"SSB",SD=T,Sum=NULL,legendPos="top")
 compareTime(lstOuts,"SSB",SD=F,Sum=NULL,startYear=1953)
 compareTime(lstOuts,"R",SD=T)

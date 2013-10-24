@@ -57,7 +57,7 @@ Model_1.1
 1  0  1  0  0  0  0  0  0  
 #Random_walk_q_yrs blank if nyrs==0
 2002 
-2011
+2012
 #Random_walk_q_sigmas blank if nyrs==0
 2.0
 2.0
