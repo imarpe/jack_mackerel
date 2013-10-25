@@ -33,15 +33,15 @@ outPath         <- "N:/Projecten/SouthPacific/WP4/R/code/submit2GitHub/Results/"
 
 setwd(Pathscript)
 
-source(paste(Pathscript,'functions_NTH.r',sep=""))
+source(paste(Pathscript,'functions.r',sep=""))
 
 # load the true and observed stocks at the start of the simulation  from :
 RecRegime <-  "LTRec"
 
 #define year ranges
-ShortT    <-  ac(2013:2017)
-MidT      <-  ac(2018:2027)
-LongT     <-  ac(2027:2040)
+ShortT    <-  ac(2014:2018)
+MidT      <-  ac(2019:2028)
+LongT     <-  ac(2028:2041)
 
 
 PathPlots1   <- paste(PathRes,RecRegime,"/Plots input/",sep="")

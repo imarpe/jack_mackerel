@@ -47,7 +47,7 @@ PathPlots2   <- paste(PathRes,RecRegime,"/Hcr",Hcr,"/Plots/",sep="")
 # Figures on results
 #-------------------------------------------------------------------------------
 JMBssb<-ssb(JMB)
-JMSssb<-ssb(JMSstore)
+JMSssb<-ssb(JMS)
 
 rSSBp <- apply(JMBssb@.Data,1:5,quantile,probs=c(0.05,0.5,0.95),na.rm=T)
 rSSBs <- apply(JMSssb@.Data,1:5,quantile,probs=c(0.05,0.5,0.95),na.rm=T)
