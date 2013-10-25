@@ -2486,12 +2486,13 @@ FUNCTION void get_future_Fs(const int& i,const int& iscenario)
     f_tmp.initialize();
     dvar_matrix F_fut_tmp(1,nfsh,1,nages);
     for (k=1;k<=nfsh;k++) F_fut_tmp(k) =F(k,endyr);
+    // cout<<F_fut_tmp<<endl;exit(1);
     switch (iscenario)
     {
       case 1:
         // f_tmp = F35;
         // cout<< "F "<<f_tmp<<endl;
-        for (int k=1;k<=nfsh;k++) f_tmp(k) = SolveF2(endyr,nage_future(i), 1.0  * catch_lastyr(k));
+        // for (int k=1;k<=nfsh;k++) f_tmp(k) = SolveF2(endyr,nage_future(i), 1.0  * catch_lastyr(k));
         break;
       case 2:
         // f_tmp = SolveF2(endyr,nage_future(i), .75  * catch_lastyr );
@@ -2521,7 +2522,8 @@ FUNCTION void get_future_Fs(const int& i,const int& iscenario)
     Z_future(i) = M(endyr);
     for (k=1;k<=nfsh;k++)
     {
-      F_future(k,i) = sel_fsh(k,endyr) * f_tmp(k);
+      // F_future(k,i) = sel_fsh(k,endyr) * F_fut_tmp(k);
+      F_future(k,i) = F_fut_tmp(k);
       Z_future(i)  += F_future(k,i);
     }
     S_future(i) = mfexp(-Z_future(i));
