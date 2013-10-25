@@ -5145,12 +5145,10 @@ FUNCTION Write_R
             " "<< MSYL                        <<
             " "<< Bmsy                        <<
             " "<< Bzero                       <<
-            " "<< Sp_Biom(i)/Bzero            <<
+            " "<< Sp_Biom(i)                  <<
             " "<< Bcur_Bmsy                   <<
             endl ;
   }
-
-
   R_report<<"$age2len"<<endl; 
   R_report<<P_age2len<<endl;
   R_report<<"$msy_m0"<<endl; 
