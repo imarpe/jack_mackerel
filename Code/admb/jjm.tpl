@@ -2503,7 +2503,7 @@ FUNCTION void get_future_Fs(const int& i,const int& iscenario)
       case 3:
         // f_tmp = SolveF2(endyr,nage_future(i), 0.5 * catch_lastyr );
         //for (int k=1;k<=nfsh;k++) f_tmp(k) = .5*mean(F(k,endyr));
-        F_fut_tmp *= 0.5;
+        F_fut_tmp *= 1.25;
         break;
       case 4:
         // for (int k=1;k<=nfsh;k++) f_tmp(k) = .25*mean(F(k,endyr));
@@ -5145,9 +5145,11 @@ FUNCTION Write_R
             " "<< MSYL                        <<
             " "<< Bmsy                        <<
             " "<< Bzero                       <<
+            " "<< Sp_Biom(i)/Bzero            <<
             " "<< Bcur_Bmsy                   <<
             endl ;
   }
+
 
   R_report<<"$age2len"<<endl; 
   R_report<<P_age2len<<endl;

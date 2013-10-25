@@ -9,7 +9,7 @@ Model_3.1
 #Sr_type 
 2  
 #AgeError 
-0  
+1  
 #Retro 
 0  
 #Steepness 
@@ -70,7 +70,7 @@ Model_3.1
 #junk                    
 0.05  
 #n_proj_yrs                    
-10  
+20  
 #---------------------------------------------------------
 # Fishery 1 N Chile  
 1  #selectivity type
