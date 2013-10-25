@@ -5133,18 +5133,18 @@ FUNCTION Write_R
     get_msy(i);
     // important for time-varying natural mortality...
     dvariable spr_mt_ft = spr_ratio(sumF,sel_tmp,i)  ;
-    dvariable spr_mt_f0 = spr_ratio(0.,sel_tmp,i)  ;
+    // Yr Fspr 1-Fspr F/Fmsy Fmsy F Fsprmsy MSY MSYL Bmsy Bzero B/Bmsy
     R_report<< i<<
             " "<< spr_mt_ft                   <<
-            " "<< spr_mt_f0                   <<
-            " "<< (1.-spr_mt_f0)/(1-spr_mt_ft)<< 
+            " "<< (1.-spr_mt_ft)              << 
             " "<< Fcur_Fmsy                   <<
             " "<< Fmsy                        <<
             " "<< sumF                        <<
             " "<< spr_ratio(Fmsy,sel_tmp,i)   <<
             " "<< MSY                         <<
-            " "<< Bmsy                        <<
             " "<< MSYL                        <<
+            " "<< Bmsy                        <<
+            " "<< Bzero                       <<
             " "<< Bcur_Bmsy                   <<
             endl ;
   }
