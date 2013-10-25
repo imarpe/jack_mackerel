@@ -30,7 +30,7 @@ pathFig <- paste(outPath,RecRegime,"/Plots input/",sep="")
 #setwd(data.dir)
 
 # Save files
-savePlots <- T           # save files or not
+savePlots <- F           # save files or not
 #fileFormat <- "png"      # "eps", "wmf", "jpg"
 # If not plotting to file, record graph history
 
@@ -227,7 +227,7 @@ maxLFit <- paste('H-Stick : A=',HSa[pp1]," B=",HSb[pp1]," sigma=",sigmaHS[pp1],
 ';Ricker  : A=',Ra[pp3]," B=",Rb[pp3]," sigma=",sigmaR[pp3],
 ';Bev-Holt: A=',BHa[pp7]," B=",BHb[pp7]," sigma=",sigmaBH[pp7], sep=" ") 
 
-write(maxLFit, file=paste(pathFig,spp,"_MaxLikelihoodFits.txt",sep=""),sep=",")
+if(savePlots) write(maxLFit, file=paste(pathFig,spp,"_MaxLikelihoodFits.txt",sep=""),sep=",")
 
 
 ##

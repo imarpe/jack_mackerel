@@ -1,5 +1,6 @@
-compareTime <- function(lstOuts,Slot,SD=F,Sum=NULL,startYear=NULL,legendPos="topright"){
+compareTime <- function(lstOuts,Slot,SD=F,Sum=NULL,startYear=NULL,legendPos="topright",...){
 
+  lst     <- list(...)
   dat     <- lapply(lstOuts,function(x){return(x[[Slot]])})
   nms     <- names(dat); if(!is.null(Sum)){nms <- c(nms,paste(Sum[1],"+",Sum[2],sep=""))}
 
@@ -10,6 +11,8 @@ compareTime <- function(lstOuts,Slot,SD=F,Sum=NULL,startYear=NULL,legendPos="top
   
   dat     <- lapply(dat,function(x){idx <- which(x[,1] %in% xrange[1]:xrange[2]); return(x[idx,])})
 
+  if(is.null(lst$ylim)==F) yrange <- lst$ylim
+  if(is.null(lst$xlim)==F) xrange <- lst$xlim
   plot(x=dat[[1]][,1],y=dat[[1]][,2],type="l",lwd=2,xlab="Years",ylab=Slot,
        xlim=xrange,ylim=yrange)
   grid(); box()
@@ -34,8 +37,9 @@ compareTime <- function(lstOuts,Slot,SD=F,Sum=NULL,startYear=NULL,legendPos="top
 
 }
 
-compareTimes <- function(lstOuts,Slots,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=NULL,legendPos="topright"){
+compareTimes <- function(lstOuts,Slots,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=NULL,legendPos="topright",...){
 
+  lst         <- list(...)
   nD          <- length(lstOuts)
   idxD        <- as.list(rep(numeric(1),nD))
   names(idxD) <- names(lstOuts)
@@ -72,6 +76,9 @@ compareTimes <- function(lstOuts,Slots,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,start
 
   dat     <- lapply(dat,function(x){idx <- which(x[,1] %in% xrange[1]:xrange[2]); return(x[idx,])})
 
+  if(is.null(lst$ylim)==F) yrange <- lst$ylim
+  if(is.null(lst$xlim)==F) xrange <- lst$xlim
+
   plot(x=dat[[1]][,1],y=dat[[1]][,2],type="l",lwd=2,xlab="Years",ylab=Slots,
        xlim=xrange,ylim=yrange)
   grid(); box()
@@ -96,7 +103,9 @@ compareTimes <- function(lstOuts,Slots,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,start
 
 }
 
-compareMatrix <- function(lstOuts,Slot,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=NULL,legendPos="topright"){
+compareMatrix <- function(lstOuts,Slot,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,startYear=NULL,legendPos="topright",...){
+
+  lst     <- list(...)
 
   dat     <- lapply(lstOuts,function(x){return(x[[Slot]])})
   nms     <- names(dat); if(!is.null(Sum)){nms <- c(nms,paste(Sum[1],"+",Sum[2],sep=""))}
@@ -123,6 +132,8 @@ compareMatrix <- function(lstOuts,Slot,SD=F,Sum=NULL,YrInd=NULL,Apply=mean,start
 
   dat     <- lapply(dat,function(x){idx <- which(x[,1] %in% xrange[1]:xrange[2]); return(x[idx,])})
 
+  if(is.null(lst$ylim)==F) yrange <- lst$ylim
+  if(is.null(lst$xlim)==F) xrange <- lst$xlim
   plot(x=dat[[1]][,1],y=dat[[1]][,2],type="l",lwd=2,xlab="Years",ylab=Slot,
        xlim=xrange,ylim=yrange)
   grid(); box()

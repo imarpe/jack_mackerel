@@ -27,11 +27,11 @@ library(lattice)
 library(MASS)
 
 #- Set paths
-codePath        <- "N:/Projecten/SouthPacific/WP4/R/code/submit2GitHub/R/"
-dataPath        <- "N:/Projecten/SouthPacific/WP4/R/code/submit2GitHub/Data/"
+codePath        <- "D:/Repository/JackMackerel/Code/R/HCRFramework/R/"
+dataPath        <- "D:/Repository/JackMackerel/Code/admb/arc/"
 outPath         <- "N:/Projecten/SouthPacific/WP4/R/code/submit2GitHub/Results/"
 
-Fname           <- "For_R.rep"
+Fname           <- "mod3.1_R.rep"
 res             <- readList(file.path(dataPath,Fname))
 
 source(file.path(codePath,"functions.r"))
@@ -46,9 +46,14 @@ nyrs            <- 30 # !!! max 43 years if selected the SGRec regime....
 futureMaxYr     <- histMaxYr + nyrs
 histPeriod      <- ac(histMinYr:histMaxYr)
 projPeriod      <- ac((histMaxYr+1):futureMaxYr)
-RecRegime       <- "LTRec" #  either "LTRec", "STRec"  Long term vs short term time series used for rct model, or SGrec : surrowgates time series
-ifelse(RecRegime=="STRec",recrPeriod  <- ac(2000:histMaxYr),recrPeriod  <- histPeriod)  # chose either 1970:2012 or 2000:2012
-selPeriod       <- ac(2004:histMaxYr) #last sel change Fish1=2003, Fish2=2005, Fish3=2002, Fish4=2005/2011
+RecRegime       <- "SGRec" #  either "LTRec", "STRec"  Long term vs short term time series used for rct model, or SGrec : surrowgates time series
+if(RecRegime=="SGRec"){
+  recrPeriod  <- ac(2002:histMaxYr)
+} else {recrPeriod  <- histPeriod}
+if(RecRegime=="STRec"){
+recrPeriod  <- ac(2002:histMaxYr)
+} else {recrPeriod  <- histPeriod}  # chose either 1970:2012 or 2000:2012
+selPeriod       <- ac(2002:histMaxYr) #last sel change Fish1=2003, Fish2=2005, Fish3=2002, Fish4=2005/2011
 fecYears        <- ac(histMaxYr) #no change in maturity
 nits            <- 100
 save(list=c("histMinYr","histMaxYr","futureMaxYr","histPeriod","projPeriod","nyrs","nits"),
@@ -96,12 +101,20 @@ fishery@range             <- range(JMB)
   # and fishery3). (there are only two wt-at-age groups for 4 fisheries)
   #-----------------------------------------------------------------------------
 
-#- for fhs 1 2 4
+#- for fhs 1
 fsh   <- 1 
 source(paste(codePath,"01a_generateWeightAtAge.r",sep=""))
 for(i in 1:nits)
-  fishery@landings.wt[,ac(histMinYr:futureMaxYr),,,c(1,2,4),i][]  <- wt[,ac(histMinYr:futureMaxYr),,,,i]
+  fishery@landings.wt[,ac(histMinYr:futureMaxYr),,,c(1),i][]  <- wt[,ac(histMinYr:futureMaxYr),,,,i]
 rm(wt)
+
+#- for fhs 2,4
+fsh   <- 2
+source(paste(codePath,"01a_generateWeightAtAge.r",sep=""))
+for(i in 1:nits)
+  fishery@landings.wt[,ac(histMinYr:futureMaxYr),,,c(2,4),i][]  <- wt[,ac(histMinYr:futureMaxYr),,,,i]
+rm(wt)
+
 
 #- for fhs 3
 fsh   <- 3
@@ -151,7 +164,7 @@ JMB@stock                             <- quantSums(JMB@stock.n * JMB@stock.wt)
   #-------------------------------------------------------------------------------
 
 #- Load data or compute new data (requires WinBUGS run, so be careful)
-newdata                               <- F
+newdata                               <- T
 
 # Bayesian method
 # run the bayesian estimation?
@@ -183,7 +196,7 @@ SR                                    <- SR[cuales,]
 #- Select the parameters which are need
 which.pars            <- c("recruits","fmort",paste("log_selcoffs_fsh[",fisheries,"]",sep=""))
 #- Read in the output of the assessment
-vcovm                 <- read.table(paste(dataPath,"jjm.cor",sep=""),skip=1,fill=TRUE,stringsAsFactors=F)
+vcovm                 <- read.table(paste(dataPath,"../jjm.cor",sep=""),skip=1,fill=TRUE,stringsAsFactors=F)
 names(vcovm)          <- vcovm[1,]
 vcovm                 <- vcovm[-1,]
 #- Std devs of the parameters
@@ -366,15 +379,15 @@ harvest(JMS)[harvest(JMS)<0 & !is.na(harvest(JMS))]   <-  0
   # 9):  clean and save
   #-------------------------------------------------------------------------------
 
-save(JMB,         file=file.path(outPath,"biol.RData"))
-save(JMBOrig,     file=file.path(outPath,"biolOrig.RData"))
-save(JMS,         file=file.path(outPath,"stock.RData"))
-save(fishery,     file=file.path(outPath,"fishery.RData"))
-save(CV_stock.n,  file=file.path(outPath,"CVstockn.RData"))
-save(CV_harvest,  file=file.path(outPath,"CVharvest.RData"))
-save(devN,        file=file.path(outPath,"devN.RData"))
-save(devF,        file=file.path(outPath,"devF.RData"))
-save(SR,          file=file.path(outPath,"SR.RData"))
-save(settings,    file=file.path(outPath,"settings.RData"))
+save(JMB,         file=file.path(outPath,"biol.RData"),compress=T)
+save(JMBOrig,     file=file.path(outPath,"biolOrig.RData"),compress=T)
+save(JMS,         file=file.path(outPath,"stock.RData"),compress=T)
+save(fishery,     file=file.path(outPath,"fishery.RData"),compress=T)
+save(CV_stock.n,  file=file.path(outPath,"CVstockn.RData"),compress=T)
+save(CV_harvest,  file=file.path(outPath,"CVharvest.RData"),compress=T)
+save(devN,        file=file.path(outPath,"devN.RData"),compress=T)
+save(devF,        file=file.path(outPath,"devF.RData"),compress=T)
+save(SR,          file=file.path(outPath,"SR.RData"),compress=T)
+save(settings,    file=file.path(outPath,"settings.RData"),compress=T)
 
 

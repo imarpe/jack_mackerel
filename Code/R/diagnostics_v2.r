@@ -345,7 +345,7 @@ if("fit" %in% what){
             for(iFleet in Nfleets:1){
               panel.polygon(x=c(lst$x[idx[,iFleet]],rev(lst$x[idx[,iFleet]])),
                             y=c(rep(0,length(lst$y[idx[,iFleet]])),rev(lst$y[idx[,iFleet]])),
-                            col=iFleet,border=0)
+                            col=(4:1)[iFleet],border=0)
             }
 
            },scales=list(y=list(axs="i")))
