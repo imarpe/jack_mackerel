@@ -13,7 +13,7 @@ Model_4.2
 #Retro 
 0  
 #Steepness 
-0.7 300 -6  
+0.65 300 -6  
 #SigmaR 
 0.6 15 -4  
 #yrs_sr 
