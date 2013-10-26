@@ -13,7 +13,11 @@ Model_4.4
 #Retro 
 0  
 #Steepness 
+<<<<<<< HEAD
 0.65 300 -6  
+=======
+0.7 300 -6  
+>>>>>>> 2c720cc5bb80078a66c00c5ac52749a0e09ceda3
 #SigmaR 
 0.6 15 -4  
 #yrs_sr 
