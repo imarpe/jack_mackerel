@@ -2507,7 +2507,7 @@ FUNCTION void get_future_Fs(const int& i,const int& iscenario)
         break;
       case 4:
         // for (int k=1;k<=nfsh;k++) f_tmp(k) = .25*mean(F(k,endyr));
-        F_fut_tmp *= 0.25;
+        F_fut_tmp *= 0.5;
         // f_tmp = SolveF2(endyr,nage_future(i), 0.25 * catch_lastyr );
         //if (Sp_Biom_NoFishRatio(i) < 0.4)
           //f_tmp = Fmsy * Sp_Biom_NoFishRatio(i)/.40;
