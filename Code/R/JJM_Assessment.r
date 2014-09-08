@@ -25,7 +25,7 @@ resultPath  <- file.path(reposDir,"Results/Assessment/")
 setwd(codePath)
 
 # Specify control file
-controlFile <- "mod6a.ctrl"
+controlFile <- "mod6a.ctl"
 
 # Run the assessment
 source("diagnostics_v2.r")
@@ -48,7 +48,8 @@ diagnostics(jjm.out,jjm.in,jjm.ypr,what=c("input","fit","projections","ypr"))
 dev.off()
 
 #Write output to file
-writeList(setOutputNames(jjm.out),fname=paste(controlFile,"_out.txt",sep=""),format="P")
+controlFileList <- gsub(".ctl", "", controlFile)
+writeList(setOutputNames(jjm.out),fname=paste(controlFileList,"_out.txt",sep=""),format="P")
 
 
 #-------------------------------------------------------------------------------
