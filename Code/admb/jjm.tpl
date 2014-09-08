@@ -147,6 +147,39 @@ DATA_SECTION
   vector aa(1,nages);
   !! aa.fill_seqadd(rec_age,1) ;
   int junk;
+// Stock specifics
+  init_int nstk                                   //Number of stocks
+  imatrix pstkname(1,nstk,1,2)
+  init_adstring stknameread;
+ LOCAL_CALCS
+  for(s=1;s<=nstk;s++) 
+  {
+    pstkname(s,1)=1; 
+    pstkname(s,2)=1;
+  }    // set whole array to equal 1 in case not enough names are read
+  adstring_array CRLF;   // blank to terminate lines
+  CRLF+="";
+  s=1;
+  for(i=1;i<=strlen(stknameread);i++)
+  if(adstring(stknameread(i))==adstring("%")) {
+    pstkname(s,2)=i-1; 
+    s++;  
+    pstkname(s,1)=i+1;
+  }
+  pstkname(nstk,2)=strlen(stknameread);
+  for(s=1;s<=nstk;s++)
+  {
+    stkname += stknameread(pstkname(s,1),pstkname(s,2))+CRLF(1);
+  }
+  log_input(datafile_name);
+  log_input(model_name);
+  log_input(styr);
+  log_input(endyr);
+  log_input(rec_age);
+  log_input(oldest_age);
+  log_input(nstk);
+  log_input(stkname);
+ END_CALCS
 // Fishery specifics
   init_int nfsh                                   //Number of fisheries
   imatrix pfshname(1,nfsh,1,2)
@@ -157,8 +190,6 @@ DATA_SECTION
     pfshname(k,1)=1; 
     pfshname(k,2)=1;
   }    // set whole array to equal 1 in case not enough names are read
-  adstring_array CRLF;   // blank to terminate lines
-  CRLF+="";
   k=1;
   for(i=1;i<=strlen(fshnameread);i++)
   if(adstring(fshnameread(i))==adstring("%")) {
@@ -171,12 +202,6 @@ DATA_SECTION
   {
     fshname += fshnameread(pfshname(k,1),pfshname(k,2))+CRLF(1);
   }
-  log_input(datafile_name);
-  log_input(model_name);
-  log_input(styr);
-  log_input(endyr);
-  log_input(rec_age);
-  log_input(oldest_age);
   log_input(nfsh);
   log_input(fshname);
  END_CALCS
@@ -297,6 +322,7 @@ DATA_SECTION
   init_matrix age_err(1,nages,1,nages)
   !! log_input(age_err);
 
+  int s // Index for stock
   int k // Index for fishery or index
   int i // Index for year
   int j // Index for age
@@ -307,102 +333,127 @@ DATA_SECTION
   *(ad_comm::global_datafile) >>  model_name; 
   log_input(cntrlfile_name);
  END_CALCS
-  // Matrix of selectivity mappings--row 1 is type (1=fishery, 2=index) and row 2 is index within that type
+  // Matrix of selectivity mappings--row 1 is index of stock
+  //  row 2 is type (1=fishery, 2=index) and row 3 is index within that type
   //  e.g., the following for 2 fisheries and 4 indices means that index 3 uses fishery 1 selectivities,
   //         the other fisheries and indices use their own parameterization
   //  1 1 2 2 1 2 
   //  1 2 1 2 1 4
-  init_imatrix sel_map(1,2,1,nfsh_and_ind) 
+  init_imatrix sel_map(1,3,1,nfsh_and_ind) 
   // maps fisheries and indices into sequential sel_map for sharing purposes
+  imatrix f_stock(1,nstk,1,nfsh_and_ind)
+  imatrix f_fsh(1,nstk,1,nfsh)
+  imatrix f_ind(1,nstk,1,nind)
   !! log_input(datafile_name);
   !! log_input(model_name);
   !! write_input_log<<"# Map shared selectivity: "<< endl;log_input(sel_map);
   !! projfile_name = cntrlfile_name(1,length(cntrlfile_name)-4) + ".prj";
+ LOCAL_CALCS
+   f_stock.initialize();
+   f_fsh.initialize();
+   f_ind.initialize();
+   for(s=1;s<=nstk;s++)
+   {
+     for(i=1;i<=nfsh_and_ind;i++)
+     {
+       if(sel_map(1,i)==s) {
+         f_stock(s,i) = 1;
+         if(i<=nfsh)
+           f_fsh(s,i) = 1;
+         if(i>nfsh)
+           f_ind(s,i-nfsh) = 1;
+       }
+     }
+   }
+   log_input(f_stock);
+   log_input(f_fsh);
+   log_input(f_ind);
+ END_CALCS
 
   
-  init_int    SrType        // 2 Bholt, 1 Ricker
+  init_ivector    SrType(1,nstk)        // 2 Bholt, 1 Ricker
   !! log_input(SrType);
-  init_int use_age_err      // nonzero value means use...
+  init_ivector use_age_err(1,nstk)      // nonzero value means use...
   !! log_input(use_age_err);
   init_int retro            // Retro years to peel off (0 means full dataset)
   !! log_input(retro);
-  init_number steepnessprior
-  init_number cvsteepnessprior
-  init_int    phase_srec
+  init_vector steepnessprior(1,nstk)
+  init_vector cvsteepnessprior(1,nstk)
+  init_ivector    phase_srec(1,nstk)
 
-  init_number sigmarprior
-  number log_sigmarprior
-  init_number cvsigmarprior
-  init_int    phase_sigmar
+  init_vector sigmarprior(1,nstk)
+  vector log_sigmarprior(1,nstk)
+  init_vector cvsigmarprior(1,nstk)
+  init_ivector    phase_sigmar(1,nstk)
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
-  init_int    styr_rec_est
-  init_int    endyr_rec_est
+  init_ivector    styr_rec_est(1,nstk)
+  init_ivector    endyr_rec_est(1,nstk)
   !! log_input(styr_rec_est);
   !! log_input(endyr_rec_est);
   int nrecs_est;
 
 //-----GROWTH PARAMETERS--------------------------------------------------
-  init_number Linfprior
-  init_number cvLinfprior
-  init_int    phase_Linf
-  number log_Linfprior
+  init_vector Linfprior(1,nstk)
+  init_vector cvLinfprior(1,nstk)
+  init_ivector    phase_Linf(1,nstk)
+  vector log_Linfprior(1,nstk)
   !! log_Linfprior = log(Linfprior);
   !! log_input(Linfprior)
   !! log_input(cvLinfprior)
 
-  init_number kprior
-  init_number cvkprior
-  init_int    phase_k
-  number log_kprior
+  init_vector kprior(1,nstk)
+  init_vector cvkprior(1,nstk)
+  init_ivector    phase_k(1,nstk)
+  vector log_kprior(1,nstk)
   !! log_kprior = log(kprior);
   !! log_input(kprior)
   !! log_input(cvkprior)
 
-  init_number Loprior
-  init_number cvLoprior
-  init_int    phase_Lo
-  number log_Loprior
+  init_vector Loprior(1,nstk)
+  init_vector cvLoprior(1,nstk)
+  init_ivector    phase_Lo(1,nstk)
+  vector log_Loprior(1,nstk)
   !! log_Loprior = log(Loprior);
   !! log_input(Loprior)
   !! log_input(cvLoprior)
 
-  init_number sdageprior
-  init_number cvsdageprior
-  init_int    phase_sdage
-  number log_sdageprior
+  init_vector sdageprior(1,nstk)
+  init_vector cvsdageprior(1,nstk)
+  init_ivector    phase_sdage(1,nstk)
+  vector log_sdageprior(1,nstk)
   !! log_sdageprior = log(sdageprior);
   !! log_input(sdageprior)
   !! log_input(cvsdageprior)
 
 //---------------------------------------------------------------------------
   // Basic M
-  init_number natmortprior
-  init_number cvnatmortprior
-  init_int    phase_M
+  init_vector natmortprior(1,nstk)
+  init_vector cvnatmortprior(1,nstk)
+  init_ivector    phase_M(1,nstk)
   !! log_input(natmortprior);
   !! log_input(cvnatmortprior);
   !! log_input(phase_M);
 
   // age-specific M
-  init_int     npars_Mage
-  init_ivector ages_M_changes(1,npars_Mage)
-  init_vector  Mage_in(1,npars_Mage)
-  init_int     phase_Mage
-  vector       Mage_offset_in(1,npars_Mage)
+  init_ivector npars_Mage(1,nstk)
+  init_imatrix ages_M_changes(1,nstk,1,npars_Mage) // Ragged array !!!
+  init_matrix  Mage_in(1,nstk,1,npars_Mage)
+  init_ivector phase_Mage(1,nstk)
+  matrix       Mage_offset_in(1,nstk,1,npars_Mage)
   // convert inputs to offsets from prior for initialization purposes
-  !! if (npars_Mage>0) Mage_offset_in = log(Mage_in / natmortprior);
+  !! for (s=1;s<=nstk;s++) {if (npars_Mage(s)>0) Mage_offset_in(s) = log(Mage_in(s) / natmortprior(s));}
   !! log_input(npars_Mage);
   !! log_input(ages_M_changes);
   !! log_input(Mage_in);
   !! log_input(Mage_offset_in);
 
   // time-varying M
-  init_int    phase_rw_M
-  init_int npars_rw_M
-  init_ivector  yrs_rw_M(1,npars_rw_M);
-  init_vector sigma_rw_M(1,npars_rw_M)
+  init_ivector  phase_rw_M(1,nstk)
+  init_vector   npars_rw_M(1,nstk)
+  init_imatrix  yrs_rw_M(1,nstk,1,npars_rw_M) // Ragged array !!!
+  init_matrix   sigma_rw_M(1,nstk,1,npars_rw_M)
  LOCAL_CALCS
   log_input(phase_rw_M);
   log_input(npars_rw_M);
@@ -1078,10 +1129,10 @@ DATA_SECTION
 
 PARAMETER_SECTION
  // Biological Parameters
-  init_bounded_number Mest(.02,4.8,phase_M)
-  init_bounded_vector Mage_offset(1,npars_Mage,-3,3,phase_Mage)
+  init_bounded_vector Mest(1,nstk,.02,4.8,phase_M)
+  init_bounded_matrix Mage_offset(1,nstk,1,npars_Mage,-3,3,phase_Mage)
   vector Mage(1,nages)
-  init_bounded_vector  M_rw(1,npars_rw_M,-10,10,phase_rw_M)
+  init_bounded_matrix  M_rw(1,nstk,1,npars_rw_M,-10,10,phase_rw_M)
   vector natmort(styr,endyr)
   matrix  natage(styr,endyr+1,1,nages)
   matrix N_NoFsh(styr,endyr_fut,1,nages);
@@ -1190,7 +1241,7 @@ PARAMETER_SECTION
  
   matrix nage_future(styr_fut,endyr_fut,1,nages)
 
-  init_vector rec_dev_future(styr_fut,endyr_fut,phase_proj);
+  init_vector_vector rec_dev_future(1,nstk,styr_fut,endyr_fut,phase_proj);
   vector Sp_Biom_future(styr_fut-rec_age,endyr_fut);
   3darray F_future(1,nfsh,styr_fut,endyr_fut,1,nages);
   matrix Z_future(styr_fut,endyr_fut,1,nages);
@@ -1237,7 +1288,7 @@ PARAMETER_SECTION
   matrix sel_like_ind(1,nind,1,4)       
   vector ind_like(1,nind)
   vector fpen(1,6)    
-  vector post_priors(1,8)
+  matrix post_priors(1,8,1,nstk)
   vector post_priors_indq(1,nind)
   objective_function_value obj_fun
   vector obj_comps(1,14)
@@ -2081,36 +2132,40 @@ FUNCTION void Catch_at_Age(const int& i)
   }
   //+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==
 FUNCTION evaluate_the_objective_function
-  // if (active(fmort_dev))   
-  if (active(fmort))   
-  {
-    Cat_Like();
-    Fmort_Pen();
-  }
-  Rec_Like();
-  if (active(rec_dev))
-    Age_Like();
-  Srv_Like();
-  Sel_Like();
-  Compute_priors();
-  if (active(log_Rzero)) // OjO
-    obj_fun += .5 * square(log_Rzero-mean_log_rec); // A slight penalty to keep Rzero in reality...
-
   obj_comps.initialize();
-  obj_comps(1)  = sum(catch_like);
-  obj_comps(2)  = sum(age_like_fsh);
+  for (s=1;i<=nstk;s++)
+  {
+    // if (active(fmort_dev))   
+    if (active(fmort))   
+    {
+      Cat_Like();
+      Fmort_Pen();
+    }
+    Rec_Like();
+    if (active(rec_dev))
+      Age_Like();
+    Srv_Like();
+    Sel_Like();
+    Compute_priors();
+    if (active(log_Rzero)) // OjO
+      obj_fun += .5 * square(log_Rzero-mean_log_rec); // A slight penalty to keep Rzero in reality...
+
+  
+    obj_comps(s,1)  = sum(catch_like);
+    obj_comps(s,2)  = sum(age_like_fsh);
 //------------------------------------------NEW-------------
-  obj_comps(3)  = sum(length_like_fsh);
+    obj_comps(s,3)  = sum(length_like_fsh);
 //-----------------------------------------------------------
-  obj_comps(4)  = sum(sel_like_fsh);
-  obj_comps(5)  = sum(ind_like);
-  obj_comps(6)  = sum(age_like_ind);
-  obj_comps(7)  = sum(length_like_ind);
-  obj_comps(8)  = sum(sel_like_ind);
-  obj_comps(9)  = sum(rec_like);
-  obj_comps(10) = sum(fpen);
-  obj_comps(11) = sum(post_priors_indq);
-  obj_comps(12) = sum(post_priors);
+    obj_comps(s,4)  = sum(sel_like_fsh);
+    obj_comps(s,5)  = sum(ind_like);
+    obj_comps(s,6)  = sum(age_like_ind);
+    obj_comps(s,7)  = sum(length_like_ind);
+    obj_comps(s,8)  = sum(sel_like_ind);
+    obj_comps(s,9)  = sum(rec_like);
+    obj_comps(s,10) = sum(fpen);
+    obj_comps(s,11) = sum(post_priors_indq);
+    obj_comps(s,12) = sum(post_priors);
+  }
   obj_fun     += sum(obj_comps);
 FUNCTION Cat_Like
   // Eases into the catch-biomass likelihoods.  If too far off to start, full constraint to fit can be too aggressive
@@ -2141,16 +2196,16 @@ FUNCTION Cat_Like
   {
     for (k=1;k<=nfsh;k++)
       for (i=styr;i<=endyr;i++)
-         catch_like(k) += .5*square(log(catch_bio(k,i)+.0001) - log(pred_catch(k,i)+.0001) )/catch_bio_lva(k,i);
+         catch_like(s,k) += .5*f_fsh(s,k)*square(log(catch_bio(k,i)+.0001) - log(pred_catch(k,i)+.0001) )/catch_bio_lva(k,i);
   }
   else
   {
     for (k=1;k<=nfsh;k++)
-      catch_like(k) += catchbiomass_pen * norm2(log(catch_bio(k)   
-                      +.000001) - log(pred_catch(k) +.000001));
+      catch_like(s,k) += f_fsh(s,k) * catchbiomass_pen * norm2(log(catch_bio(k)   
+                        +.000001) - log(pred_catch(k) +.000001));
   }
 
-  catch_like *= catch_pen;
+  catch_like(s) *= catch_pen;
 FUNCTION Rec_Like
   rec_like.initialize();
   if (active(rec_dev))
@@ -2160,42 +2215,42 @@ FUNCTION Rec_Like
     if (current_phase()>2)
     {
       if (last_phase())
-        pred_rec = SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr));
+        pred_rec = SRecruit(Sp_Biom(styr_rec(s)-rec_age,endyr-rec_age).shift(styr_rec(s))(styr_rec(s),endyr));
       else 
-        pred_rec = .1+SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr));
+        pred_rec = .1+SRecruit(Sp_Biom(styr_rec(s)-rec_age,endyr-rec_age).shift(styr_rec(s))(styr_rec(s),endyr));
 
       dvariable SSQRec;
       SSQRec.initialize();
-      dvar_vector chi(styr_rec_est,endyr_rec_est);
-      chi = log(mod_rec(styr_rec_est,endyr_rec_est)) - log(pred_rec(styr_rec_est,endyr_rec_est));
+      dvar_vector chi(styr_rec_est(s),endyr_rec_est(s));
+      chi = log(mod_rec(styr_rec_est(s),endyr_rec_est(s))) - log(pred_rec(styr_rec_est(s),endyr_rec_est(s)));
       SSQRec   = norm2( chi ) ;
-      m_sigmarsq =  SSQRec/nrecs_est;
+      m_sigmarsq =  SSQRec/nrecs_est(s);
       m_sigmar   =  sqrt(m_sigmarsq);
 
       if (current_phase()>4||last_phase())
-        rec_like(1) = (SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est*log_sigmar; 
+        rec_like(s,1) = (SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est(s)*log_sigmar; 
       else
-        rec_like(1) = .1*(SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est*log_sigmar; 
+        rec_like(s,1) = .1*(SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est(s)*log_sigmar; 
     }
 
     if (last_phase())
     {
       // Variance term for the parts not estimated by sr curve
-      rec_like(4) += .5*norm2( rec_dev(styr_rec,styr_rec_est) )/sigmarsq + (styr_rec_est-styr_rec)*log(sigmar) ; 
+      rec_like(s,4) += .5*norm2( rec_dev(styr_rec(s),styr_rec_est(s)) )/sigmarsq + (styr_rec_est(s)-styr_rec(s))*log(sigmar) ; 
 
-      if ( endyr > endyr_rec_est)
-        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est,endyr  ) )/sigmarsq + (endyr-endyr_rec_est)*log(sigmar) ; 
+      if ( endyr > endyr_rec_est(s))
+        rec_like(s,4) += .5*norm2( rec_dev(endyr_rec_est(s),endyr  ) )/sigmarsq + (endyr-endyr_rec_est(s))*log(sigmar) ; 
     }
     else // JNI comment next line
-       rec_like(2) += norm2( rec_dev(styr_rec_est,endyr) ) ;
+       rec_like(s,2) += norm2( rec_dev(styr_rec_est(s),endyr) ) ;
 
-    rec_like(2) += norm2( rec_dev(styr_rec_est,endyr) ) ;
+    rec_like(s,2) += norm2( rec_dev(styr_rec_est(s),endyr) ) ;
 
     if (active(rec_dev_future))
     {
       // Future recruitment variability (based on past)
       sigmar_fut   = sigmar ;
-      rec_like(3) += norm2(rec_dev_future)/(2*square(sigmar_fut))+ size_count(rec_dev_future)*log(sigmar_fut);
+      rec_like(s,3) += norm2(rec_dev_future(s))/(2*square(sigmar_fut))+ size_count(rec_dev_future(s))*log(sigmar_fut);
     }
   }
 FUNCTION Compute_priors
@@ -2217,32 +2272,32 @@ FUNCTION Compute_priors
   }
 
   if (active(Mest))
-    post_priors(1) += square(log(Mest/natmortprior))/(2.*cvnatmortprior*cvnatmortprior); 
+    post_priors(1,s) += square(log(Mest(s)/natmortprior(s)))/(2.*cvnatmortprior(s)*cvnatmortprior(s)); 
 
   if (active(Mage_offset))  
-    post_priors(1) += norm2(Mage_offset)/(2.*cvnatmortprior*cvnatmortprior); 
+    post_priors(1,s) += norm2(Mage_offset(s))/(2.*cvnatmortprior(s)*cvnatmortprior(s)); 
 
   if (active(M_rw))
-    for (int i=1;i<=npars_rw_M;i++)
-      post_priors(1) +=  square(M_rw(i))/ (2.*sigma_rw_M(i)*sigma_rw_M(i)) ;
+    for (int i=1;i<=npars_rw_M(s);i++)
+      post_priors(1,s) +=  square(M_rw(s,i))/ (2.*sigma_rw_M(s,i)*sigma_rw_M(s,i)) ;
 
   if (active(steepness))
-    post_priors(2) += square(log(steepness/steepnessprior))/(2*cvsteepnessprior*cvsteepnessprior); 
+    post_priors(2,s) += square(log(steepness(s)/steepnessprior(s)))/(2*cvsteepnessprior(s)*cvsteepnessprior(s)); 
 
   if (active(log_sigmar))
-    post_priors(3) += square(log(sigmar/sigmarprior))/(2*cvsigmarprior*cvsigmarprior); 
+    post_priors(3,s) += square(log(sigmar(s)/sigmarprior(s)))/(2*cvsigmarprior(s)*cvsigmarprior(s)); 
 //--------------------------NEW------------------------------------
   if (active(log_Linf))
-    post_priors(4) += square(log_Linf-log_Linfprior)/(2*cvLinfprior*cvLinfprior); 
+    post_priors(4,s) += square(log_Linf(s)-log_Linfprior(s))/(2*cvLinfprior(s)*cvLinfprior(s)); 
 
   if (active(log_k))
-    post_priors(5) += square(log_k-log_kprior)/(2*cvkprior*cvkprior); 
+    post_priors(5,s) += square(log_k(s)-log_kprior(s))/(2*cvkprior(s)*cvkprior(s)); 
 
   if (active(log_Lo))
-    post_priors(6) += square(log_Lo-log_Loprior)/(2*cvLoprior*cvLoprior); 
+    post_priors(6,s) += square(log_Lo(s)-log_Loprior(s))/(2*cvLoprior(s)*cvLoprior(s)); 
 
   if (active(log_sdage))
-    post_priors(7) += square(log_sdage-log_sdageprior)/(2*cvsdageprior*cvsdageprior); 
+    post_priors(7,s) += square(log_sdage(s)-log_sdageprior(s))/(2*cvsdageprior(s)*cvsdageprior(s)); 
 FUNCTION Fmort_Pen
   // Phases less than 3, penalize High F's---------------------------------
   if (current_phase()<3)
