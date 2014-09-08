@@ -45,15 +45,15 @@ Model_1.4ms
 0.05	0.05
 -4	-4
 # NEW npars_mage
-0
+0	0
 # NEW Mage_in
 
 # phase_Mage
--5
+-5	-5
 #Phase_Random_walk_M 
--4
+-4	-4
 #Nyrs_Random_walk_M 
-0
+0	0
 #Random_walk_M_yrs blank if nyrs==0
 
 #Random_walk_M_sigmas blank if nyrs==0
