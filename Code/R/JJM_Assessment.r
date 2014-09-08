@@ -30,14 +30,14 @@ controlFile <- "mod6a.ctrl"
 # Run the assessment
 source("diagnostics_v2.r")
 source("ADMB2R_15102013.r")
-system(paste('"jjm.exe"','-ind',paste(controlFile,".ctr",sep=""),'-nox'), wait = TRUE)
+system(paste('"jjm.exe"','-ind',paste(controlFile,".ctl",sep=""),'-nox'), wait = TRUE)
 
 # Read in the output of the assessment
 run_name="mod0.5"
 dat_name="mod0.5.dat"
 
 jjm.in  <- read.dat(iFilename = paste(dat_name,sep=""),iPath=inputPath)
-jjm.out <- readList(file.path(inputPath,paste("arc/",run_name,"_r.rep",sep="")))
+jjm.out <- readList(file.path(inputPath,paste("arc/",run_name,"_R.rep",sep="")))
 jjm.ypr <- readYPR(file.path(inputPath,paste( "arc/",run_name,".yld",  sep="")))
 
 #-------------------------------------------------------------------------------
