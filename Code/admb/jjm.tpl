@@ -1334,17 +1334,17 @@ PARAMETER_SECTION
 
 
 //-----GROWTH PARAMETERS--------------------------------------------------
- number Linf;
- number k_coeff;
- number Lo;
- number sdage;
- vector mu_age(1,nages);
- vector sigma_age(1,nages);
+ vector Linf(1,nstk);
+ vector k_coeff(1,nstk);
+ vector Lo(1,nstk);
+ vector sdage(1,nstk);
+ matrix mu_age(1,nstk,1,nages);
+ matrix sigma_age(1,nstk,1,nages);
  matrix P1(1,nages,1,nlength);
  matrix P2(1,nages,1,nlength);
  matrix P3(1,nages,1,nlength);
  vector Ones_length(1,nlength);
- matrix P_age2len(1,nages,1,nlength);
+ 3darray P_age2len(1,nstk,1,nages,1,nlength);
 
 //-----------------------------------------------------------------------
  // Initialize coefficients (if needed)
@@ -1593,16 +1593,19 @@ FUNCTION Get_Age2length
   // Lo=Loprior;// first length (corresponds to first age-group)
   // sdage=sdageprior;// coefficient of variation of length-at-age
  // if some of these are estimated.
-  Linf    = mfexp(log_Linf);
-  k_coeff = mfexp(log_k);
-  Lo      = mfexp(log_Lo);
-  sdage   = mfexp(log_sdage);
+  for(s=1;s<=nstk;s++)
+  {
+    Linf(s)    = mfexp(log_Linf(s));
+    k_coeff(s) = mfexp(log_k(s));
+    Lo(s)      = mfexp(log_Lo(s));
+    sdage(s)   = mfexp(log_sdage(s));
   int i, j;
-  mu_age(1)=Lo; // first length (modal)
+  mu_age(s,1)=Lo(s); // first length (modal)
   for (i=2;i<=nages;i++)
-    mu_age(i) = Linf*(1.-exp(-k_coeff))+exp(-k_coeff)*mu_age(i-1); // the mean length by age group
-  sigma_age=sdage*mu_age; // standard deviation of length-at-age
-  P_age2len = ALK( mu_age, sigma_age, len_bins);
+    mu_age(s,i) = Linf(s)*(1.-exp(-k_coeff(s)))+exp(-k_coeff(s))*mu_age(s,i-1); // the mean length by age group
+  sigma_age(s)=sdage(s)*mu_age(s); // standard deviation of length-at-age
+  P_age2len(s) = ALK( mu_age(s), sigma_age(s), len_bins);
+  }
 FUNCTION dvar_matrix ALK(dvar_vector& mu, dvar_vector& sig, dvector& x)
 	//RETURN_ARRAYS_INCREMENT();
 	int i, j;
