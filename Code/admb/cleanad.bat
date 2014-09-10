@@ -23,7 +23,7 @@ del *.hes >NUL
 del variance. >NUL
 del *.cov >NUL
 del *.rpt >NUL
-:: del *.cor >NUL
+del *.cor >NUL
 del *.eva >NUL
 del *.td2 >NUL
 del *.tds >NUL
