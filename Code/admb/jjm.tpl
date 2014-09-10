@@ -1145,10 +1145,10 @@ PARAMETER_SECTION
 
 
  //-----GROWTH PARAMETERS--------------------------------------------------
-  init_number log_Linf(phase_Linf);
-  init_number log_k(phase_k);
-  init_number log_Lo(phase_Lo);
-  init_number log_sdage(phase_sdage);
+  init_vector log_Linf(1,nstk,phase_Linf);
+  init_vector log_k(1,nstk,phase_k);
+  init_vector log_Lo(1,nstk,phase_Lo);
+  init_vector log_sdage(1,nstk,phase_sdage);
 //---------------------------------------------------------------------------
 
 
@@ -1834,14 +1834,14 @@ FUNCTION Get_Selectivity
 
   // Map selectivities across fisheries and indices as needed.
   for (k=1;k<=nfsh;k++)
-    if (sel_map(2,k)!=k)  // If 2nd row shows a different fishery then use that fishery
-      log_sel_fsh(k) = log_sel_fsh(sel_map(2,k));
+    if (sel_map(3,k)!=k)  // If 2nd row shows a different fishery then use that fishery
+      log_sel_fsh(k) = log_sel_fsh(sel_map(3,k));
 
   for (k=1+nfsh;k<=nfsh_and_ind;k++)
-    if (sel_map(1,k)!=2) 
-      log_sel_ind(k-nfsh) = log_sel_fsh(sel_map(2,k));
-    else if (sel_map(2,k)!=(k-nfsh)) 
-      log_sel_ind(k-nfsh) = log_sel_ind(sel_map(2,k));
+    if (sel_map(2,k)!=2) 
+      log_sel_ind(k-nfsh) = log_sel_fsh(sel_map(3,k));
+    else if (sel_map(3,k)!=(k-nfsh)) 
+      log_sel_ind(k-nfsh) = log_sel_ind(sel_map(3,k));
 
   sel_fsh = mfexp(log_sel_fsh);
   sel_ind = mfexp(log_sel_ind);
