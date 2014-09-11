@@ -1133,15 +1133,15 @@ PARAMETER_SECTION
   init_bounded_matrix Mage_offset(1,nstk,1,npars_Mage,-3,3,phase_Mage)
   vector Mage(1,nages)
   init_bounded_matrix  M_rw(1,nstk,1,npars_rw_M,-10,10,phase_rw_M)
-  vector natmort(styr,endyr)
+  matrix natmort(1,nstk,styr,endyr)
   matrix  natage(styr,endyr+1,1,nages)
   matrix N_NoFsh(styr,endyr_fut,1,nages);
   // vector Sp_Biom(styr_sp,endyr)
   vector pred_rec(styr_rec,endyr)
   vector mod_rec(styr_rec,endyr) // As estimated by model
-  matrix  M(styr,endyr,1,nages)
-  matrix  Z(styr,endyr,1,nages)
-  matrix  S(styr,endyr,1,nages)
+  3darray  M(1,nstk,styr,endyr,1,nages)
+  3darray  Z(1,nstk,styr,endyr,1,nages)
+  3darray  S(1,nstk,styr,endyr,1,nages)
 
 
  //-----GROWTH PARAMETERS--------------------------------------------------
@@ -1437,27 +1437,30 @@ PARAMETER_SECTION
 
 PRELIMINARY_CALCS_SECTION
   // Initialize age-specific changes in M if they are specified
-  M(styr) = Mest;
-  if (npars_Mage>0)
+  for (s=1;s<=nstk;s++)
   {
-    Mage_offset = Mage_offset_in;
-    int jj=1;
-    for (j=1;j<=nages;j++)
+    M(s,styr) = Mest(s);
+    if (npars_Mage(s)>0)
     {
-     if (j==ages_M_changes(jj))
+      Mage_offset(s) = Mage_offset_in(s);
+      int jj=1;
+      for (j=1;j<=nages;j++)
       {
-        M(styr,j) = M(styr,1)*mfexp(Mage_offset(jj));
-        jj++;
-        if (npars_Mage < jj) jj=npars_Mage;
+       if (j==ages_M_changes(s,jj))
+        {
+          M(s,styr,j) = M(s,styr,1)*mfexp(Mage_offset(s,jj));
+          jj++;
+          if (npars_Mage(s) < jj) jj=npars_Mage(s);
+        }
+        else
+          if(j>1) 
+            M(s,styr,j) = M(s,styr,j-1);
       }
-      else
-        if(j>1) 
-          M(styr,j) = M(styr,j-1);
     }
+    //Initialize matrix of M
+    for (i=styr+1;i<=endyr;i++)
+      M(s,i) = M(s,i-1);
   }
-  //Initialize matrix of M
-  for (i=styr+1;i<=endyr;i++)
-    M(i) = M(i-1);
   log_input(M);
   Get_Age2length();
 INITIALIZATION_SECTION
@@ -1847,45 +1850,48 @@ FUNCTION Get_Selectivity
   sel_ind = mfexp(log_sel_ind);
 
 FUNCTION Get_NatMortality
-  natmort = Mest;
-  M(styr) = Mest;
-  // Age varying part
-  if (npars_Mage>0 && (active(Mest) || active(Mage_offset)))
+  for (s=1;s<=nstk;s++)
   {
-    int jj=1;
-    for (j=1;j<=nages;j++)
+    natmort(s) = Mest(s);
+    M(s,styr) = Mest(s);
+    // Age varying part
+    if (npars_Mage(s)>0 && (active(Mest) || active(Mage_offset)))
     {
-      if (j==ages_M_changes(jj))
+      int jj=1;
+      for (j=1;j<=nages;j++)
       {
-        M(styr,j) = M(styr,1)*mfexp(Mage_offset(jj));
-        jj++;
-        if (npars_Mage < jj) jj=npars_Mage;
+         if (j==ages_M_changes(s,jj))
+        {
+          M(s,styr,j) = M(s,styr,1)*mfexp(Mage_offset(s,jj));
+          jj++;
+          if (npars_Mage(s) < jj) jj=npars_Mage(s);
+        }
+        else
+          if(j>1) 
+            M(s,styr,j) = M(s,styr,j-1);
       }
-      else
-        if(j>1) 
-          M(styr,j) = M(styr,j-1);
     }
-  }
 
-  // Time varying part
-  if (npars_rw_M>0 && active(M_rw))
-  {
-    int ii=1;
-    for (i=styr+1;i<=endyr;i++)
+    // Time varying part
+    if (npars_rw_M(s)>0 && active(M_rw))
     {
-      if (i==yrs_rw_M(ii))
+      int ii=1;
+      for (i=styr+1;i<=endyr;i++)
       {
-        M(i) = M(i-1)*mfexp(M_rw(ii));
-        ii++;
-        if (npars_rw_M < ii) ii=npars_rw_M;
+        if (i==yrs_rw_M(s,ii))
+        {
+          M(s,i) = M(s,i-1)*mfexp(M_rw(s,ii));
+          ii++;
+          if (npars_rw_M(s) < ii) ii=npars_rw_M(s);
+        }
+        else
+          M(s,i) = M(s,i-1);
       }
-      else
-        M(i) = M(i-1);
     }
+    else
+      for (i=styr+1;i<=endyr;i++)
+        M(s,i) = M(s,i-1);
   }
-  else
-    for (i=styr+1;i<=endyr;i++)
-      M(i) = M(i-1);
 
 FUNCTION Get_Mortality2
   Get_NatMortality();
@@ -1893,9 +1899,12 @@ FUNCTION Get_Mortality2
   for (k=1;k<=nfsh;k++)
   {
     F(k)   = elem_div(catage(k),natage);
-    Z     += F(k);
+    Z(sel_map(1,k))     += F(k);
   }
-  S = mfexp(-1.*Z);
+  for (s=1;s<=nstk;s++)
+  {
+    S(s) = mfexp(-1.*Z(s));
+  }
 
 FUNCTION Get_Mortality
   Get_NatMortality();
@@ -1905,14 +1914,17 @@ FUNCTION Get_Mortality
     Fmort.initialize();
     for (k=1;k<=nfsh;k++)
     {
-      Fmort +=  fmort(k);
+      Fmort(sel_map(1,k)) +=  fmort(k);
       for (i=styr;i<=endyr;i++)
       {
         F(k,i)   =  fmort(k,i) * sel_fsh(k,i) ;
-        Z(i)    += F(k,i);
+        Z(sel_map(1,k),i)    += F(k,i);
       }
     }
-    S  = mfexp(-1.*Z);
+    for (s=1;s<=nstk;s++)
+    {
+      S(s)  = mfexp(-1.*Z(s));
+    }
   }
   
 
