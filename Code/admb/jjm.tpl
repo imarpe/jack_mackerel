@@ -306,13 +306,14 @@ DATA_SECTION
   vector age_vector(1,nages);
   !! for (j=1;j<=nages;j++)
   !!  age_vector(j) = double(j+rec_age-1);
-  init_vector wt_pop(1,nages)
+  init_matrix wt_pop(1,nstk,1,nages)
   !! log_input(wt_pop);
-  init_vector maturity(1,nages)
+  init_matrix maturity(1,nstk,1,nages)
   !! log_input(maturity);
   // !! if (max(maturity)>.9) maturity /=2.;
-  vector wt_mature(1,nages);
-  !! wt_mature = elem_prod(wt_pop,maturity) ;
+  matrix wt_mature(1,nstk,1,nages);
+  !! for (s=1;s<=nstk;s++)
+  !!  wt_mature(s) = elem_prod(wt_pop(s),maturity(s)) ;
 
   //Spawning month-----
   init_number spawnmo
@@ -1048,7 +1049,7 @@ DATA_SECTION
     write_input_log<<"# Number of projection years " <<endl<<nproj_yrs<<" "<<endl;// cin>>junk;
 
  END_CALCS
-  number R_guess;
+  vector R_guess(1,nstk);
 
   vector offset_ind(1,nind)
   vector offset_fsh(1,nfsh)
@@ -1134,11 +1135,11 @@ PARAMETER_SECTION
   vector Mage(1,nages)
   init_bounded_matrix  M_rw(1,nstk,1,npars_rw_M,-10,10,phase_rw_M)
   matrix natmort(1,nstk,styr,endyr)
-  matrix  natage(styr,endyr+1,1,nages)
-  matrix N_NoFsh(styr,endyr_fut,1,nages);
+  3darray  natage(1,nstk,styr,endyr+1,1,nages)
+  3darray N_NoFsh(1,nstk,styr,endyr_fut,1,nages);
   // vector Sp_Biom(styr_sp,endyr)
-  vector pred_rec(styr_rec,endyr)
-  vector mod_rec(styr_rec,endyr) // As estimated by model
+  matrix pred_rec(1,nstk,styr_rec,endyr)
+  matrix mod_rec(1,nstk,styr_rec,endyr) // As estimated by model
   3darray  M(1,nstk,styr,endyr,1,nages)
   3darray  Z(1,nstk,styr,endyr,1,nages)
   3darray  S(1,nstk,styr,endyr,1,nages)
@@ -1153,23 +1154,23 @@ PARAMETER_SECTION
 
 
  // Stock rectuitment params
-  init_number mean_log_rec(1); 
-  init_bounded_number steepness(0.21,Steepness_UB,phase_srec)
-  init_number log_Rzero(phase_Rzero)  
+  init_vector mean_log_rec(1,nstk,1); 
+  init_bounded_vector steepness(1,nstk,0.21,Steepness_UB,phase_srec)
+  init_vector log_Rzero(1,nstk,phase_Rzero)  
   // OjO
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
   init_bounded_vector rec_dev(styr_rec,endyr,-15,15,2)
   // init_vector rec_dev(styr_rec,endyr,2)
-  init_number log_sigmar(phase_sigmar);
+  init_vector log_sigmar(1,nstk,phase_sigmar);
   number m_sigmarsq  
   number m_sigmar
-  number sigmarsq  
-  number sigmar
-  number alpha   
-  number beta   
-  number Bzero   
-  number Rzero   
-  number phizero
+  vector sigmarsq(1,nstk)  
+  vector sigmar(1,nstk)
+  vector alpha(1,nstk)   
+  vector beta(1,nstk)   
+  vector Bzero(1,nstk)   
+  vector Rzero(1,nstk)   
+  vector phizero(1,nstk)
   number avg_rec_dev   
 
  // Fishing mortality parameters
@@ -1305,7 +1306,7 @@ PARAMETER_SECTION
   // sdreport_vector q_ind(1,nind)
   sdreport_vector totbiom(styr,endyr+1)
   sdreport_vector totbiom_NoFish(styr,endyr)
-  sdreport_vector Sp_Biom(styr_sp,endyr+1)
+  sdreport_matrix Sp_Biom(1,nstk,styr_sp,endyr+1)
   sdreport_vector Sp_Biom_NoFish(styr_sp,endyr_fut)
   sdreport_vector Sp_Biom_NoFishRatio(styr,endyr)
   sdreport_number ABCBiom;
@@ -1898,7 +1899,7 @@ FUNCTION Get_Mortality2
   Z       = M;
   for (k=1;k<=nfsh;k++)
   {
-    F(k)   = elem_div(catage(k),natage);
+    F(k)   = elem_div(catage(k),natage(sel_map(1,k)));
     Z(sel_map(1,k))     += F(k);
   }
   for (s=1;s<=nstk;s++)
@@ -3148,55 +3149,62 @@ FUNCTION Get_Bzero
   Bzero.initialize();
   Rzero    =  mfexp(log_Rzero); 
 
-  dvar_vector survtmp(1,nages);
-  survtmp = mfexp(-M(styr));
+  dvar_matrix survtmp(1,nstk,1,nages);
+  for (s=1; s<=nstk; s++)
+    survtmp(s) = mfexp(-M(s,styr));
 
-  dvar_matrix natagetmp(styr_rec,styr,1,nages);
+  dvar3_array natagetmp(1,nstk,styr_rec,styr,1,nages);
   natagetmp.initialize();
 
-  natagetmp(styr_rec,1) = Rzero;
-  for (j=2; j<=nages; j++)
-    natagetmp(styr_rec,j) = natagetmp(styr_rec,j-1) * survtmp(j-1);
-  natagetmp(styr_rec,nages) /= (1.-survtmp(nages)); 
-
-  Bzero = elem_prod(wt_mature , pow(survtmp,spmo_frac))*natagetmp(styr_rec) ;
-  phizero = Bzero/Rzero;
-
-  switch (SrType)
+  for (s=1; s<=nstk; s++)
   {
-    case 1:
-      alpha = log(-4.*steepness/(steepness-1.));
-      break;
-    case 2:
+    natagetmp(s,styr_rec,1) = Rzero(s);
+    for (j=2; j<=nages; j++)
+      natagetmp(s,styr_rec,j) = natagetmp(s,styr_rec,j-1) * survtmp(s,j-1);
+    natagetmp(s,styr_rec,nages) /= (1.-survtmp(s,nages)); 
+
+    Bzero(s) = elem_prod(wt_mature(s) , pow(survtmp(s),spmo_frac))*natagetmp(s,styr_rec) ;
+    phizero(s) = Bzero(s)/Rzero(s);
+
+    switch (SrType(s))
     {
-      alpha  =  Bzero * (1. - (steepness - 0.2) / (0.8*steepness) ) / Rzero;
-      beta   = (5. * steepness - 1.) / (4. * steepness * Rzero);
+      case 1:
+        alpha(s) = log(-4.*steepness(s)/(steepness(s)-1.));
+        break;
+      case 2:
+      {
+        alpha(s)  =  Bzero(s) * (1. - (steepness(s) - 0.2) / (0.8*steepness(s)) ) / Rzero(s);
+        beta(s)   = (5. * steepness(s) - 1.) / (4. * steepness(s) * Rzero(s));
+      }
+        break;
+      case 4:
+      {
+        beta(s)  = log(5.*steepness(s))/(0.8*Bzero(s)) ;
+        alpha(s) = log(Rzero(s)/Bzero(s))+beta*Bzero(s);
+      }
+        break;
     }
-    break;
-    case 4:
-    {
-      beta  = log(5.*steepness)/(0.8*Bzero) ;
-      alpha = log(Rzero/Bzero)+beta*Bzero;
-    }
-      break;
   }
   Sp_Biom.initialize();
-  Sp_Biom(styr_sp,styr_rec-1) = Bzero;
-  for (i=styr_rec;i<styr;i++)
+  for (s=1; s<=nstk; s++)
   {
-    Sp_Biom(i) = elem_prod(natagetmp(i),pow(survtmp,spmo_frac)) * wt_mature; 
-    // natagetmp(i,1)          = mfexp(rec_dev(i) + log_Rzero); // OjO numbers a function of mean not SR curve...
-    natagetmp(i,1)          = mfexp(rec_dev(i) + mean_log_rec);
-    natagetmp(i+1)(2,nages) = ++elem_prod(natagetmp(i)(1,nages-1),mfexp(-M(styr)(1,nages-1)) );
-    natagetmp(i+1,nages)   += natagetmp(i,nages)*mfexp(-M(styr,nages));
+    Sp_Biom(s)(styr_sp,styr_rec-1) = Bzero(s);
+    for (i=styr_rec;i<styr;i++)
+    {
+      Sp_Biom(s,i) = elem_prod(natagetmp(s,i),pow(survtmp(s),spmo_frac)) * wt_mature(s); 
+      // natagetmp(i,1)          = mfexp(rec_dev(i) + log_Rzero); // OjO numbers a function of mean not SR curve...
+      natagetmp(s,i,1)          = mfexp(rec_dev(s,i) + mean_log_rec(s));
+      natagetmp(s,i+1)(2,nages) = ++elem_prod(natagetmp(s,i)(1,nages-1),mfexp(-M(s,styr)(1,nages-1)) );
+      natagetmp(s,i+1,nages)   += natagetmp(s,i,nages)*mfexp(-M(s,styr,nages));
+    }
+    // This sets first year recruitment as deviation from mean recruitment (since SR curve can
+    // be defined for different periods and is treated semi-independently)
+    natagetmp(s,styr,1)   = mfexp(rec_dev(s,styr) + mean_log_rec(s));
+    mod_rec(s)(styr_rec,styr) = column(natagetmp(s),1);
+    natage(s,styr)  = natagetmp(s,styr); // OjO
+    Sp_Biom(s,styr) = elem_prod(natagetmp(s,styr),pow(survtmp(s),spmo_frac)) * wt_mature(s); 
+    // cout <<natagetmp<<endl;exit(1);
   }
-  // This sets first year recruitment as deviation from mean recruitment (since SR curve can
-  // be defined for different periods and is treated semi-independently)
-  natagetmp(styr,1)   = mfexp(rec_dev(styr) + mean_log_rec);
-  mod_rec(styr_rec,styr) = column(natagetmp,1);
-  natage(styr)  = natagetmp(styr); // OjO
-  Sp_Biom(styr) = elem_prod(natagetmp(styr),pow(survtmp,spmo_frac)) * wt_mature; 
-  // cout <<natagetmp<<endl;exit(1);
 
 FUNCTION dvariable Requil(dvariable& phi)
   RETURN_ARRAYS_INCREMENT();
@@ -4652,8 +4660,11 @@ FUNCTION Write_R
   ofstream R_report("For_R.rep");
   R_report<< "$repl_yld"<<endl<<repl_yld<<endl; 
   R_report<< "$repl_SSB"<<endl<<repl_SSB<<endl; 
-  R_report<<"$M"<<endl; 
-  R_report<<M<<endl;
+  for (s=1;s<=nstk;s++)
+  {
+    R_report<<"$M_"<<s<<endl; 
+    R_report<<M(s)<<endl;
+  }
   for (k=1;k<=nind;k++)
   {
     R_report<<"$q_"<<k<<endl; 
@@ -4665,7 +4676,10 @@ FUNCTION Write_R
     }
     R_report<<yrs_ind(k,nyrs_ind(k))<<" "<<pow(q_ind(k,nyrs_ind(k)),q_power_ind(k))<<endl;
   }
-  R_report<<"$M"<<endl; R_report<<natmort<<endl;
+  for (s=1;s<=nstk;s++)
+  {
+    R_report<<"$M_"<<s<<endl; R_report<<natmort(s)<<endl;
+  }
   R_report<<"$SurvNextYr"<<endl; R_report<< pred_ind_nextyr <<endl;
   R_report<<"$Yr"<<endl; for (i=styr;i<=endyr;i++) R_report<<i<<" "; R_report<<endl;
   R_Report(P_age2len);
@@ -4980,23 +4994,32 @@ FUNCTION Write_R
              << " "<< cvq_power_prior(k)<<endl;
     }
              R_report   << endl;
-    R_report << "$Mest"<<endl;
-    R_report << " "<< post_priors(1)
-             << " "<< Mest
-             << " "<< natmortprior
-             << " "<< cvnatmortprior <<endl;
+    for (s=1;s<=nstk;s++)
+    {
+    R_report << "$Mest_"<< (s) <<""<<endl;
+    R_report << " "<< post_priors(1,s)
+             << " "<< Mest(s)
+             << " "<< natmortprior(s)
+             << " "<< cvnatmortprior(s) <<endl;
+    }
     R_report   << endl;
-    R_report << "$Steep"<<endl;
-    R_report << " "<< post_priors(2)
-             << " "<< steepness
-             << " "<< steepnessprior
-             << " "<< cvsteepnessprior <<endl;
+    for (s=1;s<=nstk;s++)
+    {
+    R_report << "$Steep_"<< (s) <<""<<endl;
+    R_report << " "<< post_priors(2,s)
+             << " "<< steepness(s)
+             << " "<< steepnessprior(s)
+             << " "<< cvsteepnessprior(s) <<endl;
+    }
     R_report   << endl;
-    R_report << "$Sigmar"<<endl;
-    R_report << " "<< post_priors(3)
-             << " "<< sigmar
-             << " "<< sigmarprior
-             << " "<< cvsigmarprior <<endl;
+    for (s=1;s<=nstk;s++)
+    {
+    R_report << "$Sigmar_"<< (s) <<""<<endl;
+    R_report << " "<< post_priors(3,s)
+             << " "<< sigmar(s)
+             << " "<< sigmarprior(s)
+             << " "<< cvsigmarprior(s) <<endl;
+    }
     R_report   << endl;
     R_report<<"$Num_parameters_Est"<<endl;
     R_report<<initial_params::nvarcalc()<<endl;
@@ -5224,7 +5247,7 @@ FUNCTION Write_R
   R_report<<"$msy_m0"<<endl; 
   sel_tmp.initialize();
   // NOTE Danger here
-  dvar_matrix mtmp = M;
+  dvar3_array mtmp = M;
   for (i=styr;i<=endyr;i++) 
   { 
     M(i) = M(styr);
