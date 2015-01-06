@@ -1314,14 +1314,14 @@ PARAMETER_SECTION
   // vector recruits(styr,endyr+1)
   sdreport_number depletion
   sdreport_number depletion_dyn
-  sdreport_number MSY;
-  sdreport_number MSYL;
-  sdreport_number Fmsy;
-  sdreport_number lnFmsy;
-  sdreport_number Fcur_Fmsy;
-  sdreport_number Rmsy;
-  sdreport_number Bmsy;
-  sdreport_number Bcur_Bmsy;
+  sdreport_vector MSY(1,nstk);
+  sdreport_vector MSYL(1,nstk);
+  sdreport_vector Fmsy(1,nstk);
+  sdreport_vector lnFmsy(1,nstk);
+  sdreport_vector Fcur_Fmsy(1,nstk);
+  sdreport_vector Rmsy(1,nstk);
+  sdreport_vector Bmsy(1,nstk);
+  sdreport_vector Bcur_Bmsy(1,nstk);
   sdreport_vector pred_ind_nextyr(1,nind);
   sdreport_number OFL;
   // NOTE TO DAVE: Need to have a phase switch for sdreport variables(
@@ -2787,147 +2787,162 @@ FUNCTION get_msy
   population, given values for stock recruitment and selectivity...  
   Fmsy is the trial value of MSY example of the use of "funnel" to reduce the amount of storage for derivative calculations */
 
-  dvariable sumF=0.;
+  dvar_vector sumF(1,nstk);
+  sumF.initialize();
   for (k=1;k<=nfsh;k++)
-    sumF += sum(F(k,endyr));
+    sumF(sel_map(1,k)) += sum(F(k,endyr));
   for (k=1;k<=nfsh;k++)
-    Fratio(k) = sum(F(k,endyr)) / sumF;
+    Fratio(k) = sum(F(k,endyr)) / sumF(sel_map(1,k));
 
-  dvariable Stmp;
-  dvariable Rtmp;
-  double df=1.e-05;
-  dvariable F1;
-  F1.initialize();
-  F1 = (0.8*natmortprior);
-  dvariable F2;
-  dvariable F3;
-  dvariable yld1;
-  dvariable yld2;
-  dvariable yld3;
-  dvariable dyld;
-  dvariable dyldp;
-  int breakout=0;
-  // Newton Raphson stuff to go here
-  for (int ii=1;ii<=8;ii++)
+  for (s=1;s<=nstk;s++)
   {
-    if (mceval_phase()&&(F1>5||F1<0.01)) 
+    dvariable Stmp;
+    dvariable Rtmp;
+    double df=1.e-05;
+    dvariable F1;
+    F1.initialize();
+    F1 = (0.8*natmortprior(s));
+    dvariable F2;
+    dvariable F3;
+    dvariable yld1;
+    dvariable yld2;
+    dvariable yld3;
+    dvariable dyld;
+    dvariable dyldp;
+    int breakout=0;
+    // Newton Raphson stuff to go here
+    for (int ii=1;ii<=8;ii++)
     {
-      ii=8;
-      if (F1>5) F1=5.0; 
-      else      F1=0.001; 
-      breakout    = 1;
+      if (mceval_phase()&&(F1>5||F1<0.01)) 
+      {
+        ii=8;
+        if (F1>5) F1=5.0; 
+        else      F1=0.001; 
+        breakout    = 1;
+      }
+      F2     = F1 + df*.5;
+      F3     = F2 - df;
+      // yld1   = yield(Fratio,F1, Stmp,Rtmp); // yld2   = yield(Fratio,F2,Stmp,Rtmp); // yld3   = yield(Fratio,F3,Stmp,Rtmp);
+      yld1   = yield(Fratio,F1);
+      yld2   = yield(Fratio,F2);
+      yld3   = yield(Fratio,F3);
+      dyld   = (yld2 - yld3)/df;                          // First derivative (to find the root of this)
+      dyldp  = (yld2 + yld3 - 2.*yld1)/(.25*df*df);       // Second derivative (for Newton Raphson)
+      if (breakout==0)
+      {
+        F1    -= dyld/dyldp;
+      }
+      else
+      {
+        if (F1>5) 
+          cout<<"Fmsy v. high "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
+        else      
+          cout<<"Fmsy v. low "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
+      }
     }
-    F2     = F1 + df*.5;
-    F3     = F2 - df;
-    // yld1   = yield(Fratio,F1, Stmp,Rtmp); // yld2   = yield(Fratio,F2,Stmp,Rtmp); // yld3   = yield(Fratio,F3,Stmp,Rtmp);
-    yld1   = yield(Fratio,F1);
-    yld2   = yield(Fratio,F2);
-    yld3   = yield(Fratio,F3);
-    dyld   = (yld2 - yld3)/df;                          // First derivative (to find the root of this)
-    dyldp  = (yld2 + yld3 - 2.*yld1)/(.25*df*df);       // Second derivative (for Newton Raphson)
-    if (breakout==0)
     {
-      F1    -= dyld/dyldp;
-    }
-    else
-    {
-      if (F1>5) 
-        cout<<"Fmsy v. high "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
-      else      
-        cout<<"Fmsy v. low "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
-    }
-  }
-  {
     dvar_vector ttt(1,5);
     ttt      = yld(Fratio,F1);
-    Fmsy     = F1;
-    Rtmp     = ttt(3);
-    MSY      = ttt(2);
-    Bmsy     = ttt(1);
-    MSYL     = ttt(1)/Bzero;
-    lnFmsy   = log(MSY/ttt(5)); // Exploitation fraction relative to total biomass
-    Bcur_Bmsy= Sp_Biom(endyr)/Bmsy;
+    Fmsy(s)     = F1;
+    Rtmp        = ttt(3);
+    MSY(s)      = ttt(2);
+    Bmsy(s)     = ttt(1);
+    MSYL(s)     = ttt(1)/Bzero(s);
+    lnFmsy(s)   = log(MSY(s)/ttt(5)); // Exploitation fraction relative to total biomass
+    Bcur_Bmsy(s)= Sp_Biom(s,endyr)/Bmsy(s);
 
     dvariable FFtmp;
     FFtmp.initialize();
     for (k=1;k<=nfsh;k++)
-      FFtmp += mean(F(k,endyr));
-    Fcur_Fmsy= FFtmp/Fmsy;
-    Rmsy     = Rtmp;
+    {
+      if (sel_map(1,k)==s)
+        FFtmp += mean(F(k,endyr));
+    }
+    Fcur_Fmsy(s)= FFtmp/Fmsy(s);
+    Rmsy(s)     = Rtmp;
+    }
   }
+
 
 FUNCTION void get_msy(int iyr)
  /*Function calculates used in calculating MSY and MSYL for a designated component of the
   population, given values for stock recruitment and selectivity...  
   Fmsy is the trial value of MSY example of the use of "funnel" to reduce the amount of storage for derivative calculations */
 
-  dvariable sumF=0.;
+  dvar_vector sumF(1,nstk);
+  sumF.initialize();
   for (k=1;k<=nfsh;k++)
-    sumF += sum(F(k,iyr));
+    sumF(sel_map(1,k)) += sum(F(k,endyr));
   for (k=1;k<=nfsh;k++)
-    Fratio(k) = sum(F(k,iyr)) / sumF;
+    Fratio(k) = sum(F(k,endyr)) / sumF(sel_map(1,k));
 
-  dvariable Stmp;
-  dvariable Rtmp;
-  double df=1.e-05;
-  dvariable F1;
-  F1.initialize();
-  F1 = (0.8*natmortprior);
-  dvariable F2;
-  dvariable F3;
-  dvariable yld1;
-  dvariable yld2;
-  dvariable yld3;
-  dvariable dyld;
-  dvariable dyldp;
-  int breakout=0;
-  // Newton Raphson stuff to go here
-  for (int ii=1;ii<=8;ii++)
+  for (s=1;s<=nstk;s++)
   {
-    if (mceval_phase()&&(F1>5||F1<0.01)) 
+    dvariable Stmp;
+    dvariable Rtmp;
+    double df=1.e-05;
+    dvariable F1;
+    F1.initialize();
+    F1 = (0.8*natmortprior(s));
+    dvariable F2;
+    dvariable F3;
+    dvariable yld1;
+    dvariable yld2;
+    dvariable yld3;
+    dvariable dyld;
+    dvariable dyldp;
+    int breakout=0;
+    // Newton Raphson stuff to go here
+    for (int ii=1;ii<=8;ii++)
     {
-      ii=8;
-      if (F1>5) F1=5.0; 
-      else      F1=0.001; 
-      breakout    = 1;
+      if (mceval_phase()&&(F1>5||F1<0.01)) 
+      {
+        ii=8;
+        if (F1>5) F1=5.0; 
+        else      F1=0.001; 
+        breakout    = 1;
+      }
+      F2     = F1 + df*.5;
+      F3     = F2 - df;
+      // yld1   = yield(Fratio,F1, Stmp,Rtmp); // yld2   = yield(Fratio,F2,Stmp,Rtmp); // yld3   = yield(Fratio,F3,Stmp,Rtmp);
+      yld1   = yield(Fratio,F1,iyr);
+      yld2   = yield(Fratio,F2,iyr);
+      yld3   = yield(Fratio,F3,iyr);
+      dyld   = (yld2 - yld3)/df;                          // First derivative (to find the root of this)
+      dyldp  = (yld2 + yld3 - 2.*yld1)/(.25*df*df);   // Second derivative (for Newton Raphson)
+      if (breakout==0)
+      {
+        F1    -= dyld/dyldp;
+      }
+      else
+      {
+        if (F1>5) 
+          cout<<"Fmsy v. high "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
+        else      
+          cout<<"Fmsy v. low "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
+      }
     }
-    F2     = F1 + df*.5;
-    F3     = F2 - df;
-    // yld1   = yield(Fratio,F1, Stmp,Rtmp); // yld2   = yield(Fratio,F2,Stmp,Rtmp); // yld3   = yield(Fratio,F3,Stmp,Rtmp);
-    yld1   = yield(Fratio,F1,iyr);
-    yld2   = yield(Fratio,F2,iyr);
-    yld3   = yield(Fratio,F3,iyr);
-    dyld   = (yld2 - yld3)/df;                          // First derivative (to find the root of this)
-    dyldp  = (yld2 + yld3 - 2.*yld1)/(.25*df*df);   // Second derivative (for Newton Raphson)
-    if (breakout==0)
     {
-      F1    -= dyld/dyldp;
-    }
-    else
-    {
-      if (F1>5) 
-        cout<<"Fmsy v. high "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
-      else      
-        cout<<"Fmsy v. low "<< endl;// yld1<<" "<< yld2<<" "<< yld3<<" "<< F1<<" "<< F2<<" "<< F3<<" "<< endl;
-    }
-  }
-  {
-    dvar_vector ttt(1,5);
-    ttt      = yld(Fratio,F1,iyr);
-    Fmsy     = F1;
-    Rtmp     = ttt(3);
-    MSY      = ttt(2);
-    Bmsy     = ttt(1);
-    MSYL     = ttt(1)/Bzero;
-    lnFmsy   = log(MSY/ttt(5)); // Exploitation fraction relative to total biomass
-    Bcur_Bmsy= Sp_Biom(iyr)/Bmsy;
+      dvar_vector ttt(1,5);
+      ttt      = yld(Fratio,F1,iyr);
+      Fmsy(s)     = F1;
+      Rtmp        = ttt(3);
+      MSY(s)      = ttt(2);
+      Bmsy(s)     = ttt(1);
+      MSYL(s)     = ttt(1)/Bzero(s);
+      lnFmsy(s)   = log(MSY(s)/ttt(5)); // Exploitation fraction relative to total biomass
+      Bcur_Bmsy(s)= Sp_Biom(s,iyr)/Bmsy(s);
 
-    dvariable FFtmp;
-    FFtmp.initialize();
-    for (k=1;k<=nfsh;k++)
-      FFtmp += mean(F(k,iyr));
-    Fcur_Fmsy= FFtmp/Fmsy;
-    Rmsy     = Rtmp;
+      dvariable FFtmp;
+      FFtmp.initialize();
+      for (k=1;k<=nfsh;k++)
+      {
+        if (sel_map(1,k)==s)
+          FFtmp += mean(F(k,iyr));
+      }
+      Fcur_Fmsy(s)= FFtmp/Fmsy(s);
+      Rmsy(s)     = Rtmp;
+    }
   }
 
 FUNCTION dvar_vector yld(const dvar_vector& Fratio, const dvariable& Ftmp,int iyr)
