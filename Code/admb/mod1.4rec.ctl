@@ -19,8 +19,10 @@ Model_1.4rec
 #SigmaR 
 0.6 15 -4  
 #yrs_sr 
-1970 1999 
-2000 2012 
+1970 2000 
+1999 2012 
+#SR_shifts blank if Nsr_curves==1
+2000
 #Linf
 74.4	0.1	-4																																									
 #K

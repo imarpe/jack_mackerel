@@ -320,6 +320,8 @@ DATA_SECTION
   !! projfile_name = cntrlfile_name(1,length(cntrlfile_name)-4) + ".prj";
 
   
+  init_int    Nsr_curves
+  !! log_input(Nsr_curves);
   init_int    SrType        // 2 Bholt, 1 Ricker
   !! log_input(SrType);
   init_int use_age_err      // nonzero value means use...
@@ -337,11 +339,34 @@ DATA_SECTION
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
-  init_int    styr_rec_est
-  init_int    endyr_rec_est
+  init_ivector styr_rec_est(1,Nsr_curves)
+  init_ivector endyr_rec_est(1,Nsr_curves)
   !! log_input(styr_rec_est);
   !! log_input(endyr_rec_est);
   int nrecs_est;
+  vector nrecs_est_shift(1,Nsr_curves);
+  init_ivector sr_shift(1,Nsr_curves-1)
+  vector yy_sr(styr_sp,endyr+1);  //OjO indices!!!
+  vector yy_shift_st(1,Nsr_curves)
+  vector yy_shift_end(1,Nsr_curves)
+ LOCAL_CALCS
+  yy_sr = 1;
+  for (i=2;i<=Nsr_curves;i++)
+  {
+    for (j=sr_shift(i-1);j<=endyr+1;j++)
+    {
+      yy_sr(j) = i;
+    }
+  }
+  yy_shift_st(1) = styr_rec;
+  yy_shift_end(Nsr_curves) = endyr;
+  for (i=2;i<=Nsr_curves;i++)
+  {
+    yy_shift_st(i) = sr_shift(i-1);
+    yy_shift_end(i-1) = sr_shift(i-1)-1;
+  }
+  nrecs_est_shift = yy_shift_end - yy_shift_st + 1; //OjO!!! en vez de nrecs_est
+ END_CALCS
 
 //-----GROWTH PARAMETERS--------------------------------------------------
   init_number Linfprior
@@ -1114,11 +1139,11 @@ PARAMETER_SECTION
   number m_sigmar
   number sigmarsq  
   number sigmar
-  number alpha   
-  number beta   
-  number Bzero   
-  number Rzero   
-  number phizero
+  vector alpha(1,Nsr_curves)   
+  vector beta(1,Nsr_curves)   
+  vector Bzero(1,Nsr_curves)   
+  vector Rzero(1,Nsr_curves)   
+  vector phizero(1,Nsr_curves)
   number avg_rec_dev   
 
  // Fishing mortality parameters
@@ -2153,38 +2178,52 @@ FUNCTION Cat_Like
   catch_like *= catch_pen;
 FUNCTION Rec_Like
   rec_like.initialize();
+  pred_rec.initialize();
   if (active(rec_dev))
   {
     sigmar     =  mfexp(log_sigmar);
     sigmarsq   =  square(sigmar);
     if (current_phase()>2)
     {
-      if (last_phase())
-        pred_rec = SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr));
-      else 
-        pred_rec = .1+SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr));
+      for (i=1;i<=Nsr_curves;i++)
+      {
+        if (last_phase())
+          pred_rec(yy_shift_st(i),yy_shift_end(i)) = SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr),Nsr_curves)(yy_shift_st(i),yy_shift_end(i));
+        else 
+          pred_rec(yy_shift_st(i),yy_shift_end(i)) = .1+SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr),Nsr_curves)(yy_shift_st(i),yy_shift_end(i));
+      }
 
-      dvariable SSQRec;
+      dvar_vector SSQRec(1,Nsr_curves);
       SSQRec.initialize();
-      dvar_vector chi(styr_rec_est,endyr_rec_est);
-      chi = log(mod_rec(styr_rec_est,endyr_rec_est)) - log(pred_rec(styr_rec_est,endyr_rec_est));
-      SSQRec   = norm2( chi ) ;
-      m_sigmarsq =  SSQRec/nrecs_est;
-      m_sigmar   =  sqrt(m_sigmarsq);
+      dvar_vector chi(styr_rec_est(1),endyr_rec_est(Nsr_curves));
+      for (i=1;i<=Nsr_curves;i++)
+      {
+        chi(yy_shift_st(i),yy_shift_end(i)) = log(mod_rec(yy_shift_st(i),yy_shift_end(i))) - log(pred_rec(yy_shift_st(i),yy_shift_end(i)));
+        SSQRec(i)   = norm2( chi(yy_shift_st(i),yy_shift_end(i)) ) ;
+        m_sigmarsq(i) =  SSQRec(i)/nrecs_est_shift(i);
+        m_sigmar(i)   =  sqrt(m_sigmarsq(i));
+      }
 
       if (current_phase()>4||last_phase())
-        rec_like(1) = (SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est*log_sigmar; 
+        rec_like(1) += sum((SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est_shift*log_sigmar); 
       else
-        rec_like(1) = .1*(SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est*log_sigmar; 
+        rec_like(1) += .1*sum((SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est_shift*log_sigmar); 
     }
 
     if (last_phase())
     {
       // Variance term for the parts not estimated by sr curve
-      rec_like(4) += .5*norm2( rec_dev(styr_rec,styr_rec_est) )/sigmarsq + (styr_rec_est-styr_rec)*log(sigmar) ; 
-
-      if ( endyr > endyr_rec_est)
-        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est,endyr  ) )/sigmarsq + (endyr-endyr_rec_est)*log(sigmar) ; 
+      if ( yy_shift_st(1) > styr_rec )
+        rec_like(4) += .5*norm2( rec_dev(styr_rec,yy_shift_st(1)-1) )/sigmarsq + ((yy_shift_st(1)-1)-styr_rec)*log(sigmar) ;
+      
+      if ( endyr > yy_shift_end(Nsr_curves) )
+        rec_like(4) += .5*norm2( rec_dev(yy_shift_end(Nsr_curves)+1,endyr) )/sigmarsq + (endyr-(yy_shift_end(Nsr_curves)+1))*log(sigmar) ;
+      
+      for (i=1;i<=Nsr_curves;i++)
+      {
+        if ( (yy_shift_st(i)-1) > yy_shift_end(i-1) )
+          rec_like(4) += .5*norm2( rec_dev(yy_shift_end(i-1)+1,yy_shift_st(i)-1) )/sigmarsq + ((yy_shift_st(i)-1)-(yy_shift_end(i-1)+1))*log(sigmar) ;
+      }
     }
     else // JNI comment next line
        rec_like(2) += norm2( rec_dev(styr_rec_est,endyr) ) ;
@@ -3031,6 +3070,27 @@ FUNCTION dvar_vector SRecruit(const dvar_vector& Stmp)
   RETURN_ARRAYS_DECREMENT();
   return RecTmp;
 
+FUNCTION dvar_vector SRecruit(const dvar_vector& Stmp, const int& Nsr_tmp)
+  RETURN_ARRAYS_INCREMENT();
+  dvar_vector RecTmp(Stmp.indexmin(),Stmp.indexmax());
+  switch (SrType)
+  {
+    case 1:
+      RecTmp = elem_prod((Stmp / phizero(Nsr_tmp)) , mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) ))) ; //Ricker form from Dorn
+      break;
+    case 2:
+      RecTmp = elem_prod(Stmp , 1. / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp));        //Beverton-Holt form
+      break;
+    case 3:
+      RecTmp = mfexp(mean_log_rec(Nsr_tmp));                    //Avg recruitment
+      break;
+    case 4:
+      RecTmp = elem_prod(Stmp , mfexp( alpha(Nsr_tmp)  - Stmp * beta(Nsr_tmp))) ; //Old Ricker form
+      break;
+  }
+  RETURN_ARRAYS_DECREMENT();
+  return RecTmp;
+  
 FUNCTION dvariable SRecruit(const double& Stmp)
   RETURN_ARRAYS_INCREMENT();
   dvariable RecTmp;
@@ -3052,6 +3112,27 @@ FUNCTION dvariable SRecruit(const double& Stmp)
   RETURN_ARRAYS_DECREMENT();
   return RecTmp;
 
+FUNCTION dvariable SRecruit(const double& Stmp, const int& Nsr_tmp)
+  RETURN_ARRAYS_INCREMENT();
+  dvariable RecTmp;
+  switch (SrType)
+  {
+    case 1:
+      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) )) ; //Ricker form from Dorn
+      break;
+    case 2:
+      RecTmp = Stmp / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp);        //Beverton-Holt form
+      break;
+    case 3:
+      RecTmp = mfexp(mean_log_rec(Nsr_tmp));                    //Avg recruitment
+      break;
+    case 4:
+      RecTmp = Stmp * mfexp( alpha(Nsr_tmp)  - Stmp * beta(Nsr_tmp)) ; //old Ricker form
+      break;
+  }
+  RETURN_ARRAYS_DECREMENT();
+  return RecTmp;
+
 FUNCTION dvariable SRecruit(_CONST dvariable& Stmp)
   RETURN_ARRAYS_INCREMENT();
   dvariable RecTmp;
@@ -3068,6 +3149,27 @@ FUNCTION dvariable SRecruit(_CONST dvariable& Stmp)
       break;
     case 4:
       RecTmp = Stmp * mfexp( alpha  - Stmp * beta) ; //old Ricker form
+      break;
+  }
+  RETURN_ARRAYS_DECREMENT();
+  return RecTmp;
+
+FUNCTION dvariable SRecruit(_CONST dvariable& Stmp,_CONST int& Nsr_tmp)
+  RETURN_ARRAYS_INCREMENT();
+  dvariable RecTmp;
+  switch (SrType)
+  {
+    case 1:
+      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) )) ; //Ricker form from Dorn
+      break;
+    case 2:
+      RecTmp = Stmp / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp);        //Beverton-Holt form
+      break;
+    case 3:
+      RecTmp = mfexp(mean_log_rec(Nsr_tmp) );                    //Avg recruitment
+      break;
+    case 4:
+      RecTmp = Stmp * mfexp( alpha(Nsr_tmp)  - Stmp * beta(Nsr_tmp)) ; //old Ricker form
       break;
   }
   RETURN_ARRAYS_DECREMENT();
