@@ -346,18 +346,9 @@ DATA_SECTION
   int nrecs_est;
   vector nrecs_est_shift(1,Nsr_curves);
   init_ivector sr_shift(1,Nsr_curves-1)
-  vector yy_sr(styr_sp,endyr+1);  //OjO indices!!!
   vector yy_shift_st(1,Nsr_curves)
   vector yy_shift_end(1,Nsr_curves)
  LOCAL_CALCS
-  yy_sr = 1;
-  for (i=2;i<=Nsr_curves;i++)
-  {
-    for (j=sr_shift(i-1);j<=endyr+1;j++)
-    {
-      yy_sr(j) = i;
-    }
-  }
   yy_shift_st(1) = styr_rec;
   yy_shift_end(Nsr_curves) = endyr;
   for (i=2;i<=Nsr_curves;i++)
@@ -480,7 +471,19 @@ DATA_SECTION
   number Steepness_UB
   !! phase_Rzero =  4;
   !! phase_nosr  = -3;
-
+  
+  vector yy_sr(styr_sp,endyr+nproj_yrs);
+ LOCAL_CALCS
+  yy_sr = 1;
+  for (i=2;i<=Nsr_curves;i++)
+  {
+    for (j=sr_shift(i-1);j<=endyr+1;j++)
+    {
+      yy_sr(j) = i;
+    }
+  }
+ END_CALCS
+  
   // Selectivity controls
   // read in options for each fishery
   // Loop over fisheries and indices to read in data (conditional on sel_options)
@@ -1977,7 +1980,7 @@ FUNCTION Get_Survey_Predictions
     iyr=yrs_ind(k,nyrs_ind(k));
     dvar_vector natagetmp = elem_prod(S(endyr),natage(endyr));
     natagetmp(2,nages) = ++natagetmp(1,nages-1);
-    natagetmp(1)       = SRecruit(Sp_Biom(endyr+1-rec_age));
+    natagetmp(1)       = SRecruit(Sp_Biom(endyr+1-rec_age),yy_sr(endyr+1-rec_age));
     natagetmp(nages)  += natage(endyr,nages)*S(endyr,nages);
     // Assume same survival in 1st part of next year as same as first part of current
     pred_ind_nextyr(k) = q_ind(k,nyrs_ind(k)) * pow(elem_prod(natagetmp,pow(S(endyr),ind_month_frac(k))) * 
@@ -2019,7 +2022,7 @@ FUNCTION Calc_Dependent_Vars
     if (i>styr)
     {
       N_NoFsh(i,1)        = recruits(i);
-      N_NoFsh(i,1)       *= SRecruit(Sp_Biom_NoFish(i-rec_age)) / SRecruit(Sp_Biom(i-rec_age));
+      N_NoFsh(i,1)       *= SRecruit(Sp_Biom_NoFish(i-rec_age),yy_sr(i-rec_age)) / SRecruit(Sp_Biom(i-rec_age),yy_sr(i-rec_age));
       N_NoFsh(i)(2,nages) = ++elem_prod(N_NoFsh(i-1)(1,nages-1),exp(-M(i-1)(1,nages-1)));
       N_NoFsh(i,nages)   += N_NoFsh(i-1,nages)*exp(-M(i-1,nages));
     }
@@ -2219,16 +2222,21 @@ FUNCTION Rec_Like
       if ( endyr > yy_shift_end(Nsr_curves) )
         rec_like(4) += .5*norm2( rec_dev(yy_shift_end(Nsr_curves)+1,endyr) )/sigmarsq + (endyr-(yy_shift_end(Nsr_curves)+1))*log(sigmar) ;
       
-      for (i=1;i<=Nsr_curves;i++)
+      for (i=2;i<=Nsr_curves;i++)
       {
         if ( (yy_shift_st(i)-1) > yy_shift_end(i-1) )
           rec_like(4) += .5*norm2( rec_dev(yy_shift_end(i-1)+1,yy_shift_st(i)-1) )/sigmarsq + ((yy_shift_st(i)-1)-(yy_shift_end(i-1)+1))*log(sigmar) ;
       }
     }
     else // JNI comment next line
-       rec_like(2) += norm2( rec_dev(styr_rec_est,endyr) ) ;
+    {
+      for (i=1;i<=Nsr_curves;i++)
+      {
+        rec_like(2) += norm2( rec_dev(yy_shift_st(i),yy_shift_end(i)) ) ;
+      }
+    }
 
-    rec_like(2) += norm2( rec_dev(styr_rec_est,endyr) ) ;
+    rec_like(2) += norm2( rec_dev(yy_shift_st(1),endyr) ) ;
 
     if (active(rec_dev_future))
     {
@@ -2490,7 +2498,7 @@ FUNCTION Oper_Model
       //Z_future(i)   = F_future(1,i) + max(natmort);
       Z_future(i)   = F_future(1,i) + mean(M);
       S_future(i)   = mfexp(-Z_future(i));
-      nage_future(i,1)  = SRecruit( Sp_Biom_future(i-rec_age) ) * mfexp(rec_dev_future(i)) ;     
+      nage_future(i,1)  = SRecruit( Sp_Biom_future(i-rec_age),yy_sr(i-rec_age) ) * mfexp(rec_dev_future(i)) ;     
       Sp_Biom_future(i) = wt_mature * elem_prod(nage_future(i),pow(S_future(i),spmo_frac)) ;
       // Now graduate for the next year....
       if (i<endyr_fut)
@@ -2585,14 +2593,14 @@ FUNCTION Future_projections
     // Future Recruitment (and Sp_Biom)
     for (i=styr_fut;i<endyr_fut;i++)
     {
-      nage_future(i,1)  = SRecruit( Sp_Biom_future(i-rec_age) ) * mfexp(rec_dev_future(i)) ;     
+      nage_future(i,1)  = SRecruit( Sp_Biom_future(i-rec_age),yy_sr(i-rec_age) ) * mfexp(rec_dev_future(i)) ;     
       get_future_Fs(i,iscen);
       // Now graduate for the next year....
       nage_future(i+1)(2,nages) = ++elem_prod(nage_future(i)(1,nages-1),S_future(i)(1,nages-1));
       nage_future(i+1,nages)   += nage_future(i,nages)*S_future(i,nages);
       Sp_Biom_future(i) = wt_mature * elem_prod(nage_future(i),pow(S_future(i),spmo_frac)) ;
     }
-    nage_future(endyr_fut,1)  = SRecruit( Sp_Biom_future(endyr_fut-rec_age) ) * mfexp(rec_dev_future(endyr_fut)) ;     
+    nage_future(endyr_fut,1)  = SRecruit( Sp_Biom_future(endyr_fut-rec_age),yy_sr(endyr_fut-rec_age) ) * mfexp(rec_dev_future(endyr_fut)) ;     
     get_future_Fs(endyr_fut,iscen);
     Sp_Biom_future(endyr_fut)  = wt_mature * elem_prod(nage_future(endyr_fut),pow(S_future(endyr_fut),spmo_frac)) ;
     if (iscen==1)
@@ -2601,7 +2609,7 @@ FUNCTION Future_projections
       {                   
         N_NoFsh(i,1)        = nage_future(i,1);
         // Adjustment for no-fishing recruits (ratio of R_nofish/R_fish)
-        N_NoFsh(i,1)       *= SRecruit(Sp_Biom_NoFish(i-rec_age)) / SRecruit(Sp_Biom_future(i-rec_age));
+        N_NoFsh(i,1)       *= SRecruit(Sp_Biom_NoFish(i-rec_age),yy_sr(i-rec_age)) / SRecruit(Sp_Biom_future(i-rec_age),yy_sr(i-rec_age));
         N_NoFsh(i)(2,nages) = ++N_NoFsh(i-1)(1,nages-1)*exp(-mean(natmort));
         N_NoFsh(i,nages)   +=   N_NoFsh(i-1,nages)*exp(-mean(natmort));
         Sp_Biom_NoFish(i)   = (N_NoFsh(i)*pow(exp(-mean(natmort)),spmo_frac) * wt_mature); 
@@ -3453,7 +3461,7 @@ REPORT_SECTION
     report << endl<< "Stock Recruitment stuff "<< endl;
     for (i=styr_rec;i<=endyr;i++)
       if (active(log_Rzero))
-        report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age))<< " "<< mod_rec(i)<<endl;
+        report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age),yy_sr(i-rec_age))<< " "<< mod_rec(i)<<endl;
       else 
         report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< " 999" << " "<< mod_rec(i)<<endl;
 
@@ -3465,7 +3473,7 @@ REPORT_SECTION
     {
       stock = double (i) * Bzero /25.;
       if (active(log_Rzero))
-        report << stock <<" "<< SRecruit(stock)<<endl;
+        report << stock <<" "<< SRecruit(stock)<<endl; //falta!!!
       else
         report << stock <<" 99 "<<endl;
     }
@@ -4091,9 +4099,9 @@ FUNCTION Write_SimDatafile
     {
       sim_Sp_Biom(i) = sim_natage(i)*pow(survtmp,spmo_frac) * wt_mature; 
       if (i>styr_rec+rec_age)
-        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i-rec_age)))*mfexp(sim_rec_devs(i)); 
+        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i-rec_age),yy_sr(i-rec_age)))*mfexp(sim_rec_devs(i)); 
       else
-        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i)))*mfexp(sim_rec_devs(i)); 
+        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i)),yy_sr(i))*mfexp(sim_rec_devs(i)); 
   
       if (i>=styr)
       {
@@ -4158,7 +4166,7 @@ FUNCTION Write_SimDatafile
     double Cmsy   = value(yield(Fratio,  Fmsy));
     truth(Cmsy);
     // Now do OFL for next year...
-    ntmp(1)       = value(SRecruit(sim_Sp_Biom(endyr+1-rec_age)));
+    ntmp(1)       = value(SRecruit(sim_Sp_Biom(endyr+1-rec_age),yy_sr(endyr+1-rec_age)));
     ntmp(2,nages) = value( ++elem_prod(sim_natage(endyr)(1,nages-1),S(endyr)(1,nages-1)));
     ntmp(nages)  += value( sim_natage(endyr,nages)*S(endyr,nages));
     dvector ctmp(1,nages);
@@ -4424,7 +4432,7 @@ FUNCTION Write_SimDatafile
     }
     TruDB<<model_name<<" "<<isim<<" "<< endyr+1<<" "<<
         OFL                  <<" "<< 
-        SRecruit(sim_Sp_Biom(endyr+1-rec_age))<<" "<<
+        SRecruit(sim_Sp_Biom(endyr+1-rec_age),yy_sr(endyr+1-rec_age))<<" "<<
         sim_Sp_Biom(endyr)   <<" "<< 
         NextSurv             <<" "<< 
         steepness            <<" "<< 
@@ -4921,7 +4929,7 @@ FUNCTION Write_R
     R_report << endl<< "$Stock_Rec"<< endl;
     for (i=styr_rec;i<=endyr;i++)
       if (active(log_Rzero))
-        R_report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age))<< " "<< mod_rec(i)<<endl;
+        R_report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age),yy_sr(i-rec_age))<< " "<< mod_rec(i)<<endl;
       else 
         R_report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< " 999" << " "<< mod_rec(i)<<endl;
         
@@ -4934,7 +4942,7 @@ FUNCTION Write_R
     {
       stock = double (i) * Bzero /25.;
       if (active(log_Rzero))
-        R_report << stock <<" "<< SRecruit(stock)<<endl;
+        R_report << stock <<" "<< SRecruit(stock)<<endl; //falta!!!
       else
         R_report << stock <<" 99 "<<endl;
     }
