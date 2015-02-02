@@ -339,15 +339,15 @@ DATA_SECTION
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
-  init_ivector styr_rec_est(1,Nsr_curves)
-  init_ivector endyr_rec_est(1,Nsr_curves)
+  init_vector styr_rec_est(1,Nsr_curves)
+  init_vector endyr_rec_est(1,Nsr_curves)
   !! log_input(styr_rec_est);
   !! log_input(endyr_rec_est);
   int nrecs_est;
-  vector nrecs_est_shift(1,Nsr_curves);
+  ivector nrecs_est_shift(1,Nsr_curves);
   init_ivector sr_shift(1,Nsr_curves-1)
-  vector yy_shift_st(1,Nsr_curves)
-  vector yy_shift_end(1,Nsr_curves)
+  ivector yy_shift_st(1,Nsr_curves)
+  ivector yy_shift_end(1,Nsr_curves)
  LOCAL_CALCS
   yy_shift_st(1) = styr_rec;
   yy_shift_end(Nsr_curves) = endyr;
@@ -477,7 +477,7 @@ DATA_SECTION
   yy_sr = 1;
   for (i=2;i<=Nsr_curves;i++)
   {
-    for (j=sr_shift(i-1);j<=endyr+1;j++)
+    for (j=sr_shift(i-1);j<=endyr+nproj_yrs;j++)
     {
       yy_sr(j) = i;
     }
@@ -890,7 +890,7 @@ DATA_SECTION
          nyrs_ind_age(k) -= 1;
     }
   }
-  endyr_rec_est = endyr_rec_est - retro;
+  endyr_rec_est -= retro;
   endyr         = endyr - retro;
   styr_fut      = endyr+1;
   endyr_fut     = endyr + nproj_yrs; 
@@ -1010,8 +1010,8 @@ DATA_SECTION
     log_sigmarprior = log(sigmarprior);
     log_input(steepnessprior);
     log_input(sigmarprior);
-    nrecs_est = endyr_rec_est-styr_rec_est+1;
-    nrecs_est = endyr_rec_est-styr_rec_est+1;
+    //nrecs_est = endyr_rec_est-styr_rec_est+1;
+    //nrecs_est = endyr_rec_est-styr_rec_est+1;
     write_input_log<<"#  SSB estimated in styr endyr: " <<styr_sp    <<" "<<endyr_sp      <<" "<<endl;
     write_input_log<<"#  Rec estimated in styr endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
     write_input_log<<"#  SR Curve fit  in styr endyr: " <<styr_rec_est<<" "<<endyr_rec_est<<" "<<endl;
@@ -1130,21 +1130,21 @@ PARAMETER_SECTION
 
 
  // Stock rectuitment params
-  init_number mean_log_rec(1); 
-  init_bounded_number steepness(0.21,Steepness_UB,phase_srec)
-  init_number log_Rzero(phase_Rzero)  
+  init_vector mean_log_rec(1,Nsr_curves,1); 
+  init_bounded_vector steepness(1,Nsr_curves,0.21,Steepness_UB,phase_srec)
+  init_vector log_Rzero(1,Nsr_curves,phase_Rzero)  
   // OjO
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
   init_bounded_vector rec_dev(styr_rec,endyr,-15,15,2)
   // init_vector rec_dev(styr_rec,endyr,2)
   init_number log_sigmar(phase_sigmar);
-  number m_sigmarsq  
-  number m_sigmar
+  vector m_sigmarsq(1,Nsr_curves)  
+  vector m_sigmar(1,Nsr_curves)
   number sigmarsq  
   number sigmar
   vector alpha(1,Nsr_curves)   
   vector beta(1,Nsr_curves)   
-  vector Bzero(1,Nsr_curves)   
+  number Bzero   
   vector Rzero(1,Nsr_curves)   
   vector phizero(1,Nsr_curves)
   number avg_rec_dev   
@@ -1894,7 +1894,7 @@ FUNCTION Get_Numbers_at_Age
   // natage(styr,1) = mfexp(mean_log_rec + rec_dev(styr)); 
   // Recruitment in subsequent years
   for (i=styr+1;i<=endyr;i++)
-    natage(i,1)=mfexp(mean_log_rec+rec_dev(i));
+    natage(i,1)=mfexp(mean_log_rec(yy_sr(i))+rec_dev(i));
 
   mod_rec(styr)  = natage(styr,1);
 
@@ -2034,12 +2034,12 @@ FUNCTION Calc_Dependent_Vars
     depletion         = totbiom(endyr)/totbiom(styr);
     depletion_dyn     = totbiom(endyr)/totbiom_NoFish(endyr);
   }
-  B100 = phizero * mean(recruits(styr_rec_est, endyr_rec_est));
+  B100 = phizero(endyr) * mean(recruits(styr_rec_est(1),endyr_rec_est(Nsr_curves))); //falta!!! /falta!!!
   dvar_vector Nnext(1,nages);
   Nnext(2,nages) = ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1));
   Nnext(nages)  += natage(endyr,nages)*S(endyr,nages);
   // Compute SSB in next year using mean recruits for age 1 and same survival as in endyr
-  Nnext(1)       = mfexp(mean_log_rec+rec_dev_future(endyr+1));
+  Nnext(1)       = mfexp(mean_log_rec(yy_sr(endyr+1))+rec_dev_future(endyr+1));
   Sp_Biom(endyr+1)  = elem_prod(Nnext,pow(S(endyr),spmo_frac)) * wt_mature; 
   // Nnext(1)       = SRecruit(Sp_Biom(endyr+1-rec_age));
   ABCBiom       = Nnext*wt_pop;
@@ -2122,7 +2122,7 @@ FUNCTION evaluate_the_objective_function
   Sel_Like();
   Compute_priors();
   if (active(log_Rzero)) // OjO
-    obj_fun += .5 * square(log_Rzero-mean_log_rec); // A slight penalty to keep Rzero in reality...
+    obj_fun += sum(.5 * square(log_Rzero-mean_log_rec)); // A slight penalty to keep Rzero in reality...
 
   obj_comps.initialize();
   obj_comps(1)  = sum(catch_like);
@@ -2201,8 +2201,8 @@ FUNCTION Rec_Like
       dvar_vector chi(styr_rec_est(1),endyr_rec_est(Nsr_curves));
       for (i=1;i<=Nsr_curves;i++)
       {
-        chi(yy_shift_st(i),yy_shift_end(i)) = log(mod_rec(yy_shift_st(i),yy_shift_end(i))) - log(pred_rec(yy_shift_st(i),yy_shift_end(i)));
-        SSQRec(i)   = norm2( chi(yy_shift_st(i),yy_shift_end(i)) ) ;
+        chi(styr_rec_est(i),endyr_rec_est(i)) = log(mod_rec(styr_rec_est(i),endyr_rec_est(i))) - log(pred_rec(styr_rec_est(i),endyr_rec_est(i)));
+        SSQRec(i)   = norm2( chi(styr_rec_est(i),endyr_rec_est(i)) ) ;
         m_sigmarsq(i) =  SSQRec(i)/nrecs_est_shift(i);
         m_sigmar(i)   =  sqrt(m_sigmarsq(i));
       }
@@ -2216,27 +2216,27 @@ FUNCTION Rec_Like
     if (last_phase())
     {
       // Variance term for the parts not estimated by sr curve
-      if ( yy_shift_st(1) > styr_rec )
-        rec_like(4) += .5*norm2( rec_dev(styr_rec,yy_shift_st(1)-1) )/sigmarsq + ((yy_shift_st(1)-1)-styr_rec)*log(sigmar) ;
+      if ( styr_rec_est(1) > styr_rec )
+        rec_like(4) += .5*norm2( rec_dev(styr_rec,styr_rec_est(1)-1) )/sigmarsq + ((styr_rec_est(1)-1)-styr_rec)*log(sigmar) ;
       
-      if ( endyr > yy_shift_end(Nsr_curves) )
-        rec_like(4) += .5*norm2( rec_dev(yy_shift_end(Nsr_curves)+1,endyr) )/sigmarsq + (endyr-(yy_shift_end(Nsr_curves)+1))*log(sigmar) ;
+      if ( endyr > endyr_rec_est(Nsr_curves) )
+        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(Nsr_curves)+1,endyr) )/sigmarsq + (endyr-(endyr_rec_est(Nsr_curves)+1))*log(sigmar) ;
       
       for (i=2;i<=Nsr_curves;i++)
       {
-        if ( (yy_shift_st(i)-1) > yy_shift_end(i-1) )
-          rec_like(4) += .5*norm2( rec_dev(yy_shift_end(i-1)+1,yy_shift_st(i)-1) )/sigmarsq + ((yy_shift_st(i)-1)-(yy_shift_end(i-1)+1))*log(sigmar) ;
+        if ( (styr_rec_est(i)-1) > endyr_rec_est(i-1) )
+          rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(i-1)+1,styr_rec_est(i)-1) )/sigmarsq + ((styr_rec_est(i)-1)-(endyr_rec_est(i-1)+1))*log(sigmar) ;
       }
     }
     else // JNI comment next line
     {
       for (i=1;i<=Nsr_curves;i++)
       {
-        rec_like(2) += norm2( rec_dev(yy_shift_st(i),yy_shift_end(i)) ) ;
+        rec_like(2) += norm2( rec_dev(styr_rec_est(i),endyr_rec_est(i)) ) ;
       }
     }
 
-    rec_like(2) += norm2( rec_dev(yy_shift_st(1),endyr) ) ;
+    rec_like(2) += norm2( rec_dev(styr_rec_est(1),endyr) ) ;
 
     if (active(rec_dev_future))
     {
@@ -2274,7 +2274,7 @@ FUNCTION Compute_priors
       post_priors(1) +=  square(M_rw(i))/ (2.*sigma_rw_M(i)*sigma_rw_M(i)) ;
 
   if (active(steepness))
-    post_priors(2) += square(log(steepness/steepnessprior))/(2*cvsteepnessprior*cvsteepnessprior); 
+    post_priors(2) += sum(square(log(steepness/steepnessprior))/(2*cvsteepnessprior*cvsteepnessprior)); 
 
   if (active(log_sigmar))
     post_priors(3) += square(log(sigmar/sigmarprior))/(2*cvsigmarprior*cvsigmarprior); 
@@ -2827,8 +2827,8 @@ FUNCTION dvar_vector yld(const dvar_vector& Fratio, const dvariable& Ftmp,int iy
   phi    = elem_prod( Ntmp , pow(survtmp,spmo_frac ) ) * wt_mature;
   // Req    = Requil(phi) * exp(sigmarsq/2);
   msy_stuff(5)  = Ntmp * wt_pop;      
-  msy_stuff(4)  = phi/phizero ;       // SPR
-  msy_stuff(3)  = Requil(phi) ;       // Eq Recruitment
+  msy_stuff(4)  = phi/phizero(yy_sr(iyr)) ;       // SPR
+  msy_stuff(3)  = Requil(phi,iyr) ;       // Eq Recruitment
   msy_stuff(5) *= msy_stuff(3);       // BmsyTot
   msy_stuff(2) *= msy_stuff(3);       // MSY
   msy_stuff(1)  = phi*(msy_stuff(3)); // Bmsy
@@ -2876,8 +2876,8 @@ FUNCTION dvar_vector yld(const dvar_vector& Fratio, const dvariable& Ftmp)
   phi    = elem_prod( Ntmp , pow(survtmp,spmo_frac ) ) * wt_mature;
   // Req    = Requil(phi) * exp(sigmarsq/2);
   msy_stuff(5)  = Ntmp * wt_pop;      
-  msy_stuff(4)  = phi/phizero ;       // SPR
-  msy_stuff(3)  = Requil(phi) ;       // Eq Recruitment
+  msy_stuff(4)  = phi/phizero(yy_sr(endyr)) ;       // SPR
+  msy_stuff(3)  = Requil(phi,endyr) ;       // Eq Recruitment
   msy_stuff(5) *= msy_stuff(3);       // BmsyTot
   msy_stuff(2) *= msy_stuff(3);       // MSY
   msy_stuff(1)  = phi*(msy_stuff(3)); // Bmsy
@@ -2925,7 +2925,7 @@ FUNCTION dvariable yield(const dvar_vector& Fratio, const dvariable& Ftmp,int iy
   }
   phi    = elem_prod( Ntmp , pow(survtmp,spmo_frac ) )* wt_mature;
   // Req    = Requil(phi) * mfexp(sigmarsq/2);
-  Req    = Requil(phi) ;
+  Req    = Requil(phi,iyr) ;
   yield *= Req;
 
   RETURN_ARRAYS_DECREMENT();
@@ -2972,7 +2972,7 @@ FUNCTION dvariable yield(const dvar_vector& Fratio, const dvariable& Ftmp)
   }
   phi    = elem_prod( Ntmp , pow(survtmp,spmo_frac ) )* wt_mature;
   // Req    = Requil(phi) * mfexp(sigmarsq/2);
-  Req    = Requil(phi) ;
+  Req    = Requil(phi,endyr) ;
   yield *= Req;
 
   RETURN_ARRAYS_DECREMENT();
@@ -3013,7 +3013,7 @@ FUNCTION dvariable yield(const dvar_vector& Fratio, dvariable& Ftmp, dvariable& 
   }
   phi    = elem_prod( Ntmp , pow(survtmp,spmo_frac ) )* wt_mature;
   // Req    = Requil(phi) * exp(sigmarsq/2);
-  Req    = Requil(phi) ;
+  Req    = Requil(phi,endyr) ;
   yield *= Req;
   Stmp   = phi*Req;
 
@@ -3057,34 +3057,13 @@ FUNCTION Profile_F
     prof_F <<F1<<" "<< ttt << endl; 
   } 
 
-FUNCTION dvar_vector SRecruit(const dvar_vector& Stmp)
-  RETURN_ARRAYS_INCREMENT();
-  dvar_vector RecTmp(Stmp.indexmin(),Stmp.indexmax());
-  switch (SrType)
-  {
-    case 1:
-      RecTmp = elem_prod((Stmp / phizero) , mfexp( alpha * ( 1. - Stmp / Bzero ))) ; //Ricker form from Dorn
-      break;
-    case 2:
-      RecTmp = elem_prod(Stmp , 1. / ( alpha + beta * Stmp));        //Beverton-Holt form
-      break;
-    case 3:
-      RecTmp = mfexp(mean_log_rec);                    //Avg recruitment
-      break;
-    case 4:
-      RecTmp = elem_prod(Stmp , mfexp( alpha  - Stmp * beta)) ; //Old Ricker form
-      break;
-  }
-  RETURN_ARRAYS_DECREMENT();
-  return RecTmp;
-
 FUNCTION dvar_vector SRecruit(const dvar_vector& Stmp, const int& Nsr_tmp)
   RETURN_ARRAYS_INCREMENT();
   dvar_vector RecTmp(Stmp.indexmin(),Stmp.indexmax());
   switch (SrType)
   {
     case 1:
-      RecTmp = elem_prod((Stmp / phizero(Nsr_tmp)) , mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) ))) ; //Ricker form from Dorn
+      RecTmp = elem_prod((Stmp / phizero(Nsr_tmp)) , mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero ))) ; //Ricker form from Dorn
       break;
     case 2:
       RecTmp = elem_prod(Stmp , 1. / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp));        //Beverton-Holt form
@@ -3098,27 +3077,6 @@ FUNCTION dvar_vector SRecruit(const dvar_vector& Stmp, const int& Nsr_tmp)
   }
   RETURN_ARRAYS_DECREMENT();
   return RecTmp;
-  
-FUNCTION dvariable SRecruit(const double& Stmp)
-  RETURN_ARRAYS_INCREMENT();
-  dvariable RecTmp;
-  switch (SrType)
-  {
-    case 1:
-      RecTmp = (Stmp / phizero) * mfexp( alpha * ( 1. - Stmp / Bzero )) ; //Ricker form from Dorn
-      break;
-    case 2:
-      RecTmp = Stmp / ( alpha + beta * Stmp);        //Beverton-Holt form
-      break;
-    case 3:
-      RecTmp = mfexp(mean_log_rec);                    //Avg recruitment
-      break;
-    case 4:
-      RecTmp = Stmp * mfexp( alpha  - Stmp * beta) ; //old Ricker form
-      break;
-  }
-  RETURN_ARRAYS_DECREMENT();
-  return RecTmp;
 
 FUNCTION dvariable SRecruit(const double& Stmp, const int& Nsr_tmp)
   RETURN_ARRAYS_INCREMENT();
@@ -3126,7 +3084,7 @@ FUNCTION dvariable SRecruit(const double& Stmp, const int& Nsr_tmp)
   switch (SrType)
   {
     case 1:
-      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) )) ; //Ricker form from Dorn
+      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero )) ; //Ricker form from Dorn
       break;
     case 2:
       RecTmp = Stmp / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp);        //Beverton-Holt form
@@ -3141,34 +3099,13 @@ FUNCTION dvariable SRecruit(const double& Stmp, const int& Nsr_tmp)
   RETURN_ARRAYS_DECREMENT();
   return RecTmp;
 
-FUNCTION dvariable SRecruit(_CONST dvariable& Stmp)
-  RETURN_ARRAYS_INCREMENT();
-  dvariable RecTmp;
-  switch (SrType)
-  {
-    case 1:
-      RecTmp = (Stmp / phizero) * mfexp( alpha * ( 1. - Stmp / Bzero )) ; //Ricker form from Dorn
-      break;
-    case 2:
-      RecTmp = Stmp / ( alpha + beta * Stmp);        //Beverton-Holt form
-      break;
-    case 3:
-      RecTmp = mfexp(mean_log_rec );                    //Avg recruitment
-      break;
-    case 4:
-      RecTmp = Stmp * mfexp( alpha  - Stmp * beta) ; //old Ricker form
-      break;
-  }
-  RETURN_ARRAYS_DECREMENT();
-  return RecTmp;
-
 FUNCTION dvariable SRecruit(_CONST dvariable& Stmp,_CONST int& Nsr_tmp)
   RETURN_ARRAYS_INCREMENT();
   dvariable RecTmp;
   switch (SrType)
   {
     case 1:
-      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) )) ; //Ricker form from Dorn
+      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero )) ; //Ricker form from Dorn
       break;
     case 2:
       RecTmp = Stmp / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp);        //Beverton-Holt form
@@ -3194,31 +3131,34 @@ FUNCTION Get_Bzero
   dvar_matrix natagetmp(styr_rec,styr,1,nages);
   natagetmp.initialize();
 
-  natagetmp(styr_rec,1) = Rzero;
+  natagetmp(styr_rec,1) = Rzero(1);
   for (j=2; j<=nages; j++)
     natagetmp(styr_rec,j) = natagetmp(styr_rec,j-1) * survtmp(j-1);
   natagetmp(styr_rec,nages) /= (1.-survtmp(nages)); 
 
   Bzero = elem_prod(wt_mature , pow(survtmp,spmo_frac))*natagetmp(styr_rec) ;
-  phizero = Bzero/Rzero;
-
-  switch (SrType)
+  for (i=1; i<=Nsr_curves; i++)
   {
-    case 1:
-      alpha = log(-4.*steepness/(steepness-1.));
-      break;
-    case 2:
+    phizero(i) = Bzero/Rzero(i);
+
+    switch (SrType)
     {
-      alpha  =  Bzero * (1. - (steepness - 0.2) / (0.8*steepness) ) / Rzero;
-      beta   = (5. * steepness - 1.) / (4. * steepness * Rzero);
-    }
-    break;
-    case 4:
-    {
-      beta  = log(5.*steepness)/(0.8*Bzero) ;
-      alpha = log(Rzero/Bzero)+beta*Bzero;
-    }
+      case 1:
+        alpha(i) = log(-4.*steepness(i)/(steepness(i)-1.));
+        break;
+      case 2:
+      {
+        alpha(i)  =  Bzero * (1. - (steepness(i) - 0.2) / (0.8*steepness(i)) ) / Rzero(i);
+        beta(i)   = (5. * steepness(i) - 1.) / (4. * steepness(i) * Rzero(i));
+      }
       break;
+      case 4:
+      {
+        beta(i)  = log(5.*steepness(i))/(0.8*Bzero) ;
+        alpha(i) = log(Rzero(i)/Bzero)+beta(i)*Bzero;
+      }
+        break;
+    }
   }
   Sp_Biom.initialize();
   Sp_Biom(styr_sp,styr_rec-1) = Bzero;
@@ -3226,34 +3166,34 @@ FUNCTION Get_Bzero
   {
     Sp_Biom(i) = elem_prod(natagetmp(i),pow(survtmp,spmo_frac)) * wt_mature; 
     // natagetmp(i,1)          = mfexp(rec_dev(i) + log_Rzero); // OjO numbers a function of mean not SR curve...
-    natagetmp(i,1)          = mfexp(rec_dev(i) + mean_log_rec);
+    natagetmp(i,1)          = mfexp(rec_dev(i) + mean_log_rec(yy_sr(i)));
     natagetmp(i+1)(2,nages) = ++elem_prod(natagetmp(i)(1,nages-1),mfexp(-M(styr)(1,nages-1)) );
     natagetmp(i+1,nages)   += natagetmp(i,nages)*mfexp(-M(styr,nages));
   }
   // This sets first year recruitment as deviation from mean recruitment (since SR curve can
   // be defined for different periods and is treated semi-independently)
-  natagetmp(styr,1)   = mfexp(rec_dev(styr) + mean_log_rec);
+  natagetmp(styr,1)   = mfexp(rec_dev(styr) + mean_log_rec(yy_sr(styr)));
   mod_rec(styr_rec,styr) = column(natagetmp,1);
   natage(styr)  = natagetmp(styr); // OjO
   Sp_Biom(styr) = elem_prod(natagetmp(styr),pow(survtmp,spmo_frac)) * wt_mature; 
   // cout <<natagetmp<<endl;exit(1);
 
-FUNCTION dvariable Requil(dvariable& phi)
+FUNCTION dvariable Requil(dvariable& phi, int iyr)
   RETURN_ARRAYS_INCREMENT();
   dvariable RecTmp;
   switch (SrType)
   {
     case 1:
-      RecTmp =  Bzero * (alpha + log(phi) - log(phizero) ) / (alpha*phi);
+      RecTmp =  Bzero * (alpha(yy_sr(iyr)) + log(phi) - log(phizero(yy_sr(iyr))) ) / (alpha(yy_sr(iyr))*phi);
       break;
     case 2:
-      RecTmp =  (phi-alpha)/(beta*phi);
+      RecTmp =  (phi-alpha(yy_sr(iyr)))/(beta(yy_sr(iyr))*phi);
       break;
     case 3:
-      RecTmp =  mfexp(mean_log_rec);
+      RecTmp =  mfexp(mean_log_rec(yy_sr(iyr)));
       break;
     case 4:
-      RecTmp =  (log(phi)+alpha) / (beta*phi); //RecTmp =  (log(phi)/alpha + 1.)*beta/phi;
+      RecTmp =  (log(phi)+alpha(yy_sr(iyr))) / (beta(yy_sr(iyr))*phi); //RecTmp =  (log(phi)/alpha + 1.)*beta/phi;
       break;
   }
   // Req    = Requil(phi) * exp(sigmarsq/2);
@@ -3468,14 +3408,17 @@ REPORT_SECTION
     report << endl<< "Curve to plot "<< endl;
     report <<"stock Recruitment"<<endl;
     report <<"0 0 "<<endl;
-    dvariable stock;
-    for (i=1;i<=30;i++)
+    for (j=1;j<=Nsr_curves;j++)
     {
-      stock = double (i) * Bzero /25.;
-      if (active(log_Rzero))
-        report << stock <<" "<< SRecruit(stock)<<endl; //falta!!!
-      else
-        report << stock <<" 99 "<<endl;
+      dvariable stock;
+      for (i=1;i<=30;i++)
+      {
+        stock = double (i) * Bzero /25.;
+        if (active(log_Rzero))
+          report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
+        else
+          report << stock <<" 99 "<<endl;
+      }
     }
 
     report   << endl<<"Likelihood Components" <<endl;
@@ -3917,7 +3860,7 @@ FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr)
   }
   Ntmp(nages)=Ntmp(nages-1)*srvtmp(nages-1)/(1.-srvtmp(nages));
   SBtmp  += Ntmp(nages)*wt_mature(nages)*pow(srvtmp(nages),spmo_frac);
-  return(SBtmp/phizero);
+  return(SBtmp/phizero(yy_sr(iyr)));
 
 FUNCTION dvariable spr_unfished(int i)
   dvariable Ntmp;
@@ -4089,7 +4032,7 @@ FUNCTION Write_SimDatafile
     // fill vector with unit normal RVs
     sim_rec_devs.fill_randn(rng);
     sim_rec_devs *= value(sigmar);
-    sim_natage(styr_rec,1) = value(Rzero)*exp(sim_rec_devs(styr_rec));
+    sim_natage(styr_rec,1) = value(Rzero(1))*exp(sim_rec_devs(styr_rec)); //falta!!
     for (j=2; j<=nages; j++)
       sim_natage(styr_rec,j) = sim_natage(styr_rec,j-1) * survtmp;
     sim_natage(styr_rec,nages) /= (1.-survtmp); 
@@ -4101,7 +4044,7 @@ FUNCTION Write_SimDatafile
       if (i>styr_rec+rec_age)
         sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i-rec_age),yy_sr(i-rec_age)))*mfexp(sim_rec_devs(i)); 
       else
-        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i)),yy_sr(i))*mfexp(sim_rec_devs(i)); 
+        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i),yy_sr(i)))*mfexp(sim_rec_devs(i)); 
   
       if (i>=styr)
       {
@@ -4937,15 +4880,19 @@ FUNCTION Write_R
 
     R_report <<"$stock_Rec_Curve"<<endl;
     R_report <<"0 0"<<endl;
-    dvariable stock;
-    for (i=1;i<=30;i++)
+    for (j=1;j<=Nsr_curves;j++)
     {
-      stock = double (i) * Bzero /25.;
-      if (active(log_Rzero))
-        R_report << stock <<" "<< SRecruit(stock)<<endl; //falta!!!
-      else
-        R_report << stock <<" 99 "<<endl;
+      dvariable stock;
+      for (i=1;i<=30;i++)
+      {
+        stock = double (i) * Bzero /25.;
+        if (active(log_Rzero))
+          R_report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
+        else
+          R_report << stock <<" 99 "<<endl;
+      }
     }
+    
     R_report   << endl;
 
     R_report   << endl<<"$Like_Comp" <<endl;
