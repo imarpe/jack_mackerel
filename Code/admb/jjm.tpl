@@ -2034,7 +2034,7 @@ FUNCTION Calc_Dependent_Vars
     depletion         = totbiom(endyr)/totbiom(styr);
     depletion_dyn     = totbiom(endyr)/totbiom_NoFish(endyr);
   }
-  B100 = phizero(endyr) * mean(recruits(styr_rec_est(1),endyr_rec_est(Nsr_curves))); //falta!!! /falta!!!
+  B100 = phizero(yy_sr(endyr)) * mean(recruits(styr_rec_est(1),endyr_rec_est(Nsr_curves))); //falta!!! /falta!!!
   dvar_vector Nnext(1,nages);
   Nnext(2,nages) = ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1));
   Nnext(nages)  += natage(endyr,nages)*S(endyr,nages);
