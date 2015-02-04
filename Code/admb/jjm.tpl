@@ -4878,10 +4878,10 @@ FUNCTION Write_R
         
         R_report   << endl;
 
-    R_report <<"$stock_Rec_Curve"<<endl;
-    R_report <<"0 0"<<endl;
     for (j=1;j<=Nsr_curves;j++)
     {
+      R_report <<"$stock_Rec_Curve_"<< (j) <<endl;
+      R_report <<"0 0"<<endl;
       dvariable stock;
       for (i=1;i<=30;i++)
       {
