@@ -344,7 +344,7 @@ DATA_SECTION
   !! log_input(styr_rec_est);
   !! log_input(endyr_rec_est);
   int nrecs_est;
-  ivector nrecs_est_shift(1,Nsr_curves);
+  vector nrecs_est_shift(1,Nsr_curves);
   init_ivector sr_shift(1,Nsr_curves-1)
   ivector yy_shift_st(1,Nsr_curves)
   ivector yy_shift_end(1,Nsr_curves)
@@ -356,7 +356,7 @@ DATA_SECTION
     yy_shift_st(i) = sr_shift(i-1);
     yy_shift_end(i-1) = sr_shift(i-1)-1;
   }
-  nrecs_est_shift = yy_shift_end - yy_shift_st + 1; //OjO!!! en vez de nrecs_est
+  nrecs_est_shift = endyr_rec_est - styr_rec_est + 1.; //OjO!!! en vez de nrecs_est
  END_CALCS
 
 //-----GROWTH PARAMETERS--------------------------------------------------
@@ -2191,9 +2191,9 @@ FUNCTION Rec_Like
       for (i=1;i<=Nsr_curves;i++)
       {
         if (last_phase())
-          pred_rec(yy_shift_st(i),yy_shift_end(i)) = SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr),Nsr_curves)(yy_shift_st(i),yy_shift_end(i));
+          pred_rec(yy_shift_st(i),yy_shift_end(i)) = SRecruit(Sp_Biom(yy_shift_st(i)-rec_age,yy_shift_end(i)-rec_age).shift(yy_shift_st(i))(yy_shift_st(i),yy_shift_end(i)),i)(yy_shift_st(i),yy_shift_end(i));
         else 
-          pred_rec(yy_shift_st(i),yy_shift_end(i)) = .1+SRecruit(Sp_Biom(styr_rec-rec_age,endyr-rec_age).shift(styr_rec)(styr_rec,endyr),Nsr_curves)(yy_shift_st(i),yy_shift_end(i));
+          pred_rec(yy_shift_st(i),yy_shift_end(i)) = .1+SRecruit(Sp_Biom(yy_shift_st(i)-rec_age,yy_shift_end(i)-rec_age).shift(yy_shift_st(i))(yy_shift_st(i),yy_shift_end(i)),i)(yy_shift_st(i),yy_shift_end(i));
       }
 
       dvar_vector SSQRec(1,Nsr_curves);
