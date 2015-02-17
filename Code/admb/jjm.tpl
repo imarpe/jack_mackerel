@@ -3555,7 +3555,8 @@ REPORT_SECTION
   report<<"sigmarprior,_CV,_phase: " <<sigmarprior<<" "<<  cvsigmarprior <<" "<<phase_sigmar<<endl;
 
   report<<"Rec_estimated_in_styr_endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
-  report<<"SR_Curve_fit__in_styr_endyr: " <<styr_rec_est<<" "<<endyr_rec_est<<" "<<endl;
+  for (i=1;i<=Nsr_curves;i++)
+    report<<"SR_Curve_fit__in_styr_endyr_" <<i<<" : " <<styr_rec_est(i)<<" "<<endyr_rec_est(i)<<" "<<endl;
   report<<"Model_styr_endyr:            " <<styr        <<" "<<endyr        <<" "<<endl;
 
   report<<"M_prior,_CV,_phase "<< natmortprior<< " "<< cvnatmortprior<<" "<<phase_M<<endl;
@@ -5002,8 +5003,11 @@ FUNCTION Write_R
   R_report<<"$Rec_estimated_in_styr_endyr " <<endl;
   R_report<<styr_rec    <<" "<<endyr        <<" "<<endl;
   R_report   << endl;
-  R_report<<"$SR_Curve_fit__in_styr_endyr " <<endl;
-  R_report<<styr_rec_est<<" "<<endyr_rec_est<<" "<<endl;
+  for (i=1;i<=Nsr_curves;i++)
+  {
+    R_report<<"$SR_Curve_fit__in_styr_endyr_" << (i) <<""<<endl;
+    R_report<<styr_rec_est(i)<<" "<<endyr_rec_est(i)<<" "<<endl;
+  }
   R_report   << endl;
   R_report<<"$Model_styr_endyr" <<endl;
   R_report<<styr        <<" "<<endyr        <<" "<<endl;
