@@ -1979,7 +1979,7 @@ FUNCTION Get_Survey_Predictions
     }
     iyr=yrs_ind(k,nyrs_ind(k));
     dvar_vector natagetmp = elem_prod(S(endyr),natage(endyr));
-    natagetmp(2,nages) = ++natagetmp(1,nages-1);
+    natagetmp(2,nages) = ++natagetmp(1,nages-1)*1.;
     natagetmp(1)       = SRecruit(Sp_Biom(endyr+1-rec_age),yy_sr(endyr+1));
     natagetmp(nages)  += natage(endyr,nages)*S(endyr,nages);
     // Assume same survival in 1st part of next year as same as first part of current
