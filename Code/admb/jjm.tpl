@@ -7,7 +7,6 @@
 //    nyrs_        number of observations available to specific data set
 //
 //  DATA SPECIFIC:
-
 //    catch_bio   Observed catch biomass
 //    fsh        fishery data
 //
@@ -2529,9 +2528,28 @@ FUNCTION Oper_Model
   SaveOM.close();
   if (!mceval_phase())
     exit(1);
+
 FUNCTION void get_future_Fs(const int& i,const int& iscenario)
     f_tmp.initialize();
     dvar_matrix F_fut_tmp(1,nfsh,1,nages);
+    dvar_vector Ftot2013(1,nages);
+    dvar_vector Ftottmp(1,nages);
+		Ftot2013.initialize();
+		Ftottmp.initialize();
+		F_fut_tmp.initialize();
+		/*
+    for (int iyr=endyr-2;iyr<=endyr;iyr++)
+		  for (k=1;k<=nfsh;k++) F_fut_tmp(k) += F(k,iyr);
+		F_fut_tmp /= 3.;
+    for (k=1;k<=nfsh;k++) 
+		{
+		  Ftot2013 += F(k,2013);
+		  Ftottmp  += F_fut_tmp(k);
+		}
+		*/
+		// for (k=1;k<=nfsh;k++) F_fut_tmp(k) = elem_prod(F_fut_tmp(k),elem_div(Ftot2013,Ftottmp));
+
+		// for (k=1;k<=nfsh;k++) F_fut_tmp(k) = F(k,2013);
     for (k=1;k<=nfsh;k++) F_fut_tmp(k) =F(k,endyr);
     // cout<<F_fut_tmp<<endl;exit(1);
     switch (iscenario)
@@ -3099,7 +3117,7 @@ FUNCTION dvariable SRecruit(const double& Stmp, const int& Nsr_tmp)
   RETURN_ARRAYS_DECREMENT();
   return RecTmp;
 
-FUNCTION dvariable SRecruit(_CONST dvariable& Stmp,_CONST int& Nsr_tmp)
+FUNCTION dvariable SRecruit(const dvariable& Stmp,const int& Nsr_tmp)
   RETURN_ARRAYS_INCREMENT();
   dvariable RecTmp;
   switch (SrType)
@@ -4073,8 +4091,8 @@ FUNCTION Write_SimDatafile
     //Now write from simulated population
     //
     // Create the name of the simulated dataset
-    simname = "sim_"+ adstring(itoa(isim,buffer,10)) + ".dat";
-    truname = "tru_"+ adstring(itoa(isim,buffer,10)) + ".dat";
+    simname = "sim_"+ adstring(sprintf(buffer,"%d",isim)) + ".dat";
+    truname = "tru_"+ adstring(sprintf(buffer,"%d",isim)) + ".dat";
     ofstream trudat(truname);
     truth(Rzero);
     truth(Fmsy);
@@ -4407,7 +4425,7 @@ FUNCTION Write_Datafile
   for (int isim=1;isim<=nsims;isim++)
   {
     // Create the name of the simulated dataset
-    simname = "sim_"+ adstring(itoa(isim,buffer,10)) + ".dat";
+    simname = "sim_"+ adstring(sprintf(buffer,"%d",isim)) + ".dat";
     // Open the simulated dataset for writing
     ofstream simdat(simname);
     simdat << "# first year" <<endl;
@@ -5256,7 +5274,7 @@ FUNCTION Write_R
   R_report.close();
 
 
-FUNCTION double mn_age(_CONST dvector& pobs)
+FUNCTION double mn_age(const dvector& pobs)
   // int lb1 = pobs.indexmin();
   // int ub1 = pobs.indexmax();
   // dvector av = age_vector(lb1,ub1)  ;
@@ -5264,7 +5282,7 @@ FUNCTION double mn_age(_CONST dvector& pobs)
   double mobs = (pobs*age_vector);
   return mobs;
 
-FUNCTION double mn_age(_CONST dvar_vector& pobs)
+FUNCTION double mn_age(const dvar_vector& pobs)
   // int lb1 = pobs.indexmin();
   // int ub1 = pobs.indexmax();
   // dvector av = age_vector(lb1,ub1)  ;
@@ -5272,27 +5290,27 @@ FUNCTION double mn_age(_CONST dvar_vector& pobs)
   double mobs = value(pobs*age_vector);
   return mobs;
 
-FUNCTION double Sd_age(_CONST dvector& pobs)
+FUNCTION double Sd_age(const dvector& pobs)
   // double mobs = (pobs.shift(rec_age)*age_vector);
   // double stmp = (sqrt(elem_prod(age_vector,age_vector)*pobs.shift(rec_age) - mobs*mobs));
   double mobs = (pobs*age_vector);
   double stmp = sqrt((elem_prod(age_vector,age_vector)*pobs) - mobs*mobs);
   return stmp;
 
-FUNCTION double mn_length(_CONST dvector& pobs)
+FUNCTION double mn_length(const dvector& pobs)
   double mobs = (pobs*len_bins);
   return mobs;
 
-FUNCTION double mn_length(_CONST dvar_vector& pobs)
+FUNCTION double mn_length(const dvar_vector& pobs)
   double mobs = value(pobs*len_bins);
   return mobs;
 
-FUNCTION double Sd_length(_CONST dvector& pobs)
+FUNCTION double Sd_length(const dvector& pobs)
   double mobs = (pobs*len_bins);
   double stmp = sqrt((elem_prod(len_bins,len_bins)*pobs) - mobs*mobs);
   return stmp;
 
-FUNCTION double Eff_N_adj(_CONST double, _CONST dvar_vector& pobs, _CONST dvar_vector& phat)
+FUNCTION double Eff_N_adj(const double, const dvar_vector& pobs, const dvar_vector& phat)
   int lb1 = pobs.indexmin();
   int ub1 = pobs.indexmax();
   dvector av = age_vector(lb1,ub1)  ;
@@ -5302,7 +5320,7 @@ FUNCTION double Eff_N_adj(_CONST double, _CONST dvar_vector& pobs, _CONST dvar_v
   double stmp = value(sqrt(elem_prod(av,av)*pobs - mobs*mobs));
   return square(stmp)/square(rtmp);
 
-FUNCTION double Eff_N2(_CONST dvector& pobs, _CONST dvar_vector& phat)
+FUNCTION double Eff_N2(const dvector& pobs, const dvar_vector& phat)
   int lb1 = pobs.indexmin();
   int ub1 = pobs.indexmax();
   dvector av = age_vector(lb1,ub1)  ;
@@ -5312,13 +5330,13 @@ FUNCTION double Eff_N2(_CONST dvector& pobs, _CONST dvar_vector& phat)
   double stmp = (sqrt(elem_prod(av,av)*pobs - mobs*mobs));
   return square(stmp)/square(rtmp);
 
-FUNCTION double Eff_N(_CONST dvector& pobs, _CONST dvar_vector& phat)
+FUNCTION double Eff_N(const dvector& pobs, const dvar_vector& phat)
   dvar_vector rtmp = elem_div((pobs-phat),sqrt(elem_prod(phat,(1-phat))));
   double vtmp;
   vtmp = value(norm2(rtmp)/size_count(rtmp));
   return 1./vtmp;
 
-FUNCTION double Eff_N2_L(_CONST dvector& pobs, _CONST dvar_vector& phat)
+FUNCTION double Eff_N2_L(const dvector& pobs, const dvar_vector& phat)
   dvector av = len_bins  ;
   double mobs =      (pobs*av);
   double mhat = value(phat*av );
@@ -5326,7 +5344,7 @@ FUNCTION double Eff_N2_L(_CONST dvector& pobs, _CONST dvar_vector& phat)
   double stmp = (sqrt(elem_prod(av,av)*pobs - mobs*mobs));
   return square(stmp)/square(rtmp);
 
-FUNCTION double get_AC(_CONST int& indind)
+FUNCTION double get_AC(const int& indind)
   // Functions to compute autocorrelation in residuals 
   int i1,i2,iyr;
   i1 = 1;
