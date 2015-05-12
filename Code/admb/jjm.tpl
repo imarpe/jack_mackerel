@@ -327,9 +327,9 @@ DATA_SECTION
   !! log_input(use_age_err);
   init_int retro            // Retro years to peel off (0 means full dataset)
   !! log_input(retro);
-  init_number steepnessprior
-  init_number cvsteepnessprior
-  init_int    phase_srec
+  init_vector steepnessprior(1,Nsr_curves)
+  init_vector cvsteepnessprior(1,Nsr_curves)
+  init_ivector    phase_srec(1,Nsr_curves)
 
   init_number sigmarprior
   number log_sigmarprior
@@ -1130,7 +1130,7 @@ PARAMETER_SECTION
 
  // Stock rectuitment params
   init_vector mean_log_rec(1,Nsr_curves,1); 
-  init_bounded_vector steepness(1,Nsr_curves,0.21,Steepness_UB,phase_srec)
+  init_bounded_number_vector steepness(1,Nsr_curves,0.21,Steepness_UB,phase_srec)
   init_vector log_Rzero(1,Nsr_curves,phase_Rzero)  
   // OjO
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
@@ -2272,8 +2272,11 @@ FUNCTION Compute_priors
     for (int i=1;i<=npars_rw_M;i++)
       post_priors(1) +=  square(M_rw(i))/ (2.*sigma_rw_M(i)*sigma_rw_M(i)) ;
 
-  if (active(steepness))
-    post_priors(2) += sum(square(log(steepness/steepnessprior))/(2*cvsteepnessprior*cvsteepnessprior)); 
+  for (int i=1;i<=Nsr_curves;i++)
+  {
+    if (active(steepness(i)))
+      post_priors(2) += square(log(steepness(i)/steepnessprior(i)))/(2*cvsteepnessprior(i)*cvsteepnessprior(i)); 
+  }
 
   if (active(log_sigmar))
     post_priors(3) += square(log(sigmar/sigmarprior))/(2*cvsigmarprior*cvsigmarprior); 
@@ -3268,7 +3271,10 @@ REPORT_SECTION
         Ftot += F(k);
     log_param(Mest);
     log_param(mean_log_rec);
-    log_param(steepness);
+    for (int i=1;i<=Nsr_curves;i++)
+    {
+      log_param(steepness(i));
+    }
     log_param(log_Rzero);
     log_param(rec_dev);
     log_param(log_sigmar);
