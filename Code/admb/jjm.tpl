@@ -331,10 +331,10 @@ DATA_SECTION
   init_vector cvsteepnessprior(1,Nsr_curves)
   init_ivector    phase_srec(1,Nsr_curves)
 
-  init_number sigmarprior
-  number log_sigmarprior
-  init_number cvsigmarprior
-  init_int    phase_sigmar
+  init_vector sigmarprior(1,Nsr_curves)
+  vector log_sigmarprior(1,Nsr_curves)
+  init_vector cvsigmarprior(1,Nsr_curves)
+  init_ivector    phase_sigmar(1,Nsr_curves)
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
@@ -1136,11 +1136,11 @@ PARAMETER_SECTION
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
   init_bounded_vector rec_dev(styr_rec,endyr,-15,15,2)
   // init_vector rec_dev(styr_rec,endyr,2)
-  init_number log_sigmar(phase_sigmar);
+  init_number_vector log_sigmar(1,Nsr_curves,phase_sigmar);
   vector m_sigmarsq(1,Nsr_curves)  
   vector m_sigmar(1,Nsr_curves)
-  number sigmarsq  
-  number sigmar
+  vector sigmarsq  
+  vector sigmar
   vector alpha(1,Nsr_curves)   
   vector beta(1,Nsr_curves)   
   number Bzero   
@@ -2207,24 +2207,24 @@ FUNCTION Rec_Like
       }
 
       if (current_phase()>4||last_phase())
-        rec_like(1) += sum((SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est_shift*log_sigmar); 
+        rec_like(1) += sum(elem_div(SSQRec+ m_sigmarsq/2.,2*sigmarsq) + elem_prod(nrecs_est_shift,log_sigmar)); 
       else
-        rec_like(1) += .1*sum((SSQRec+ m_sigmarsq/2.)/(2*sigmarsq) + nrecs_est_shift*log_sigmar); 
+        rec_like(1) += .1*sum(elem_div(SSQRec+ m_sigmarsq/2.,2*sigmarsq) + elem_prod(nrecs_est_shift,log_sigmar)); 
     }
 
     if (last_phase())
     {
       // Variance term for the parts not estimated by sr curve
       if ( styr_rec_est(1) > styr_rec )
-        rec_like(4) += .5*norm2( rec_dev(styr_rec,styr_rec_est(1)-1) )/sigmarsq + ((styr_rec_est(1)-1)-styr_rec)*log(sigmar) ;
+        rec_like(4) += .5*norm2( rec_dev(styr_rec,styr_rec_est(1)-1) )/sigmarsq(1) + ((styr_rec_est(1)-1)-styr_rec)*log(sigmar(1)) ;
       
       if ( endyr > endyr_rec_est(Nsr_curves) )
-        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(Nsr_curves)+1,endyr) )/sigmarsq + (endyr-(endyr_rec_est(Nsr_curves)+1))*log(sigmar) ;
+        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(Nsr_curves)+1,endyr) )/sigmarsq(Nsr_curves) + (endyr-(endyr_rec_est(Nsr_curves)+1))*log(sigmar(Nsr_curves)) ;
       
       for (i=2;i<=Nsr_curves;i++)
       {
         if ( (styr_rec_est(i)-1) > endyr_rec_est(i-1) )
-          rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(i-1)+1,styr_rec_est(i)-1) )/sigmarsq + ((styr_rec_est(i)-1)-(endyr_rec_est(i-1)+1))*log(sigmar) ;
+          rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(i-1)+1,styr_rec_est(i)-1) )/sigmarsq(i-1) + ((styr_rec_est(i)-1)-(endyr_rec_est(i-1)+1))*log(sigmar(i-1)) ;
       }
     }
     else // JNI comment next line
@@ -2240,7 +2240,7 @@ FUNCTION Rec_Like
     if (active(rec_dev_future))
     {
       // Future recruitment variability (based on past)
-      sigmar_fut   = sigmar ;
+      sigmar_fut   = sigmar(Nsr_curves) ;
       rec_like(3) += norm2(rec_dev_future)/(2*square(sigmar_fut))+ size_count(rec_dev_future)*log(sigmar_fut);
     }
   }
@@ -2278,8 +2278,11 @@ FUNCTION Compute_priors
       post_priors(2) += square(log(steepness(i)/steepnessprior(i)))/(2*cvsteepnessprior(i)*cvsteepnessprior(i)); 
   }
 
-  if (active(log_sigmar))
-    post_priors(3) += square(log(sigmar/sigmarprior))/(2*cvsigmarprior*cvsigmarprior); 
+  for (int i=1;i<=Nsr_curves;i++)
+  {
+    if (active(log_sigmar(i)))
+      post_priors(3) += square(log(sigmar(i)/sigmarprior(i)))/(2*cvsigmarprior(i)*cvsigmarprior(i)); 
+  }
 //--------------------------NEW------------------------------------
   if (active(log_Linf))
     post_priors(4) += square(log_Linf-log_Linfprior)/(2*cvLinfprior*cvLinfprior); 
@@ -3277,7 +3280,10 @@ REPORT_SECTION
     }
     log_param(log_Rzero);
     log_param(rec_dev);
-    log_param(log_sigmar);
+    for (int i=1;i<=Nsr_curves;i++)
+    {
+      log_param(log_sigmar(i));
+    }
     log_param(fmort);
     // log_param(log_selcoffs_fsh);
     // log_param(log_sel_spl_fsh);
@@ -4056,7 +4062,7 @@ FUNCTION Write_SimDatafile
     // Simulate using new recruit series (same F's)
     // fill vector with unit normal RVs
     sim_rec_devs.fill_randn(rng);
-    sim_rec_devs *= value(sigmar);
+    sim_rec_devs *= value(sigmar(1));
     sim_natage(styr_rec,1) = value(Rzero(1))*exp(sim_rec_devs(styr_rec)); //falta!!
     for (j=2; j<=nages; j++)
       sim_natage(styr_rec,j) = sim_natage(styr_rec,j-1) * survtmp;
