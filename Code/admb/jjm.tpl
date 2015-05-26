@@ -1024,7 +1024,7 @@ DATA_SECTION
     write_input_log<<"# Number of projection years " <<endl<<nproj_yrs<<" "<<endl;// cin>>junk;
 
  END_CALCS
-  number R_guess;
+  vector R_guess(1,Nsr_curves)
 
   vector offset_ind(1,nind)
   vector offset_fsh(1,nfsh)
@@ -1087,14 +1087,30 @@ DATA_SECTION
 
   // Compute an initial Rzero value based on exploitation 
    double btmp=0.;
-   double ctmp=0.;
+   //double ctmp=0.;
+   dvector ctmp(1,Nsr_curves);
+   ctmp.initialize();
    dvector ntmp(1,nages);
    ntmp(1) = 1.;
    for (int a=2;a<=nages;a++)
      ntmp(a) = ntmp(a-1)*exp(-natmortprior-.05);
    btmp = wt_pop * ntmp;
    write_input_log << "Mean Catch"<<endl;
-   ctmp = mean(catch_bio);
+   ivector yy_shift_st_tmp(1,Nsr_curves);
+   ivector yy_shift_end_tmp(1,Nsr_curves);
+   yy_shift_st_tmp = yy_shift_st;
+   yy_shift_st_tmp(1) = styr;
+   yy_shift_end_tmp = yy_shift_end;
+   for (i=1;i<=Nsr_curves;i++)
+   {
+     for (j=1;j<=nfsh;j++)
+     {
+       ctmp(i) += sum(catch_bio(j)(yy_shift_st_tmp(i),yy_shift_end_tmp(i)));
+     }
+     ctmp(i) /= (nfsh * (yy_shift_end_tmp(i) - yy_shift_st_tmp(i) + 1));
+     //ctmp(i) = mean(catch_bio);
+   }
+   //ctmp = mean(catch_bio);
    write_input_log << ctmp <<endl;
    R_guess = log((ctmp/.02 )/btmp) ;
    write_input_log << "R_guess "<<endl;
@@ -1129,9 +1145,9 @@ PARAMETER_SECTION
 
 
  // Stock rectuitment params
-  init_vector mean_log_rec(1,Nsr_curves,1); 
+  init_number_vector mean_log_rec(1,Nsr_curves,1); 
   init_bounded_number_vector steepness(1,Nsr_curves,0.21,Steepness_UB,phase_srec)
-  init_vector log_Rzero(1,Nsr_curves,phase_Rzero)  
+  init_number_vector log_Rzero(1,Nsr_curves,phase_Rzero)  
   // OjO
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
   init_bounded_vector rec_dev(styr_rec,endyr,-15,15,2)
@@ -2120,8 +2136,12 @@ FUNCTION evaluate_the_objective_function
   Srv_Like();
   Sel_Like();
   Compute_priors();
-  if (active(log_Rzero)) // OjO
-    obj_fun += sum(.5 * square(log_Rzero-mean_log_rec)); // A slight penalty to keep Rzero in reality...
+  if (active(log_Rzero(1))) // OjO
+    for (i=1;i<=Nsr_curves;i++)
+    {
+      obj_fun += .5 * square(log_Rzero(i)-mean_log_rec(i));
+    }
+    //obj_fun += sum(.5 * square(log_Rzero(1)-mean_log_rec(1))); // A slight penalty to keep Rzero in reality...
 
   obj_comps.initialize();
   obj_comps(1)  = sum(catch_like);
@@ -3273,12 +3293,20 @@ REPORT_SECTION
       for (k=1;k<=nfsh;k++)
         Ftot += F(k);
     log_param(Mest);
-    log_param(mean_log_rec);
+    //log_param(mean_log_rec);
+    for (int i=1;i<=Nsr_curves;i++)
+    {
+      log_param(mean_log_rec(i));
+    }
     for (int i=1;i<=Nsr_curves;i++)
     {
       log_param(steepness(i));
     }
-    log_param(log_Rzero);
+    for (int i=1;i<=Nsr_curves;i++)
+    {
+      log_param(log_Rzero(i));
+    }
+    //log_param(log_Rzero);
     log_param(rec_dev);
     for (int i=1;i<=Nsr_curves;i++)
     {
@@ -3430,7 +3458,7 @@ REPORT_SECTION
 
     report << endl<< "Stock Recruitment stuff "<< endl;
     for (i=styr_rec;i<=endyr;i++)
-      if (active(log_Rzero))
+      if (active(log_Rzero(1)))
         report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age),yy_sr(i))<< " "<< mod_rec(i)<<endl;
       else 
         report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< " 999" << " "<< mod_rec(i)<<endl;
@@ -3444,7 +3472,7 @@ REPORT_SECTION
       for (i=1;i<=30;i++)
       {
         stock = double (i) * Bzero /25.;
-        if (active(log_Rzero))
+        if (active(log_Rzero(1)))
           report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
           report << stock <<" 99 "<<endl;
@@ -4902,7 +4930,7 @@ FUNCTION Write_R
     }
     R_report << endl<< "$Stock_Rec"<< endl;
     for (i=styr_rec;i<=endyr;i++)
-      if (active(log_Rzero))
+      if (active(log_Rzero(1)))
         R_report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age),yy_sr(i))<< " "<< mod_rec(i)<<endl;
       else 
         R_report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< " 999" << " "<< mod_rec(i)<<endl;
@@ -4917,7 +4945,7 @@ FUNCTION Write_R
       for (i=1;i<=30;i++)
       {
         stock = double (i) * Bzero /25.;
-        if (active(log_Rzero))
+        if (active(log_Rzero(1)))
           R_report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
           R_report << stock <<" 99 "<<endl;
