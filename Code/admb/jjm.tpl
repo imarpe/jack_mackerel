@@ -4939,6 +4939,13 @@ FUNCTION Write_R
 
     for (j=1;j<=Nsr_curves;j++)
     {
+      R_report <<"$stock_Rec_Curve_years_"<< (j) <<endl;
+      R_report << styr_rec_est(j) <<" "<< endyr_rec_est(j)<<endl;
+    }
+    R_report   << endl;
+    
+    for (j=1;j<=Nsr_curves;j++)
+    {
       R_report <<"$stock_Rec_Curve_"<< (j) <<endl;
       R_report <<"0 0"<<endl;
       dvariable stock;
