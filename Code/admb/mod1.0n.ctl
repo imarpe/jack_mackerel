@@ -6,6 +6,8 @@ Model_North_1.0
 # 2 3 4 1 2 3 4 5 6 7 8 9  
 1 2 1  
 1 1 1  
+#Nsr_curves
+2
 #Sr_type 
 2  
 #AgeError 
@@ -13,11 +15,19 @@ Model_North_1.0
 #Retro 
 0  
 #Steepness 
-0.8 300 -6  
+0.8 0.8
+300 300
+-6 -6 
 #SigmaR 
-0.6 15 -4  
+0.6 0.6
+15 15
+-4 -4 
 #yrs_sr 
-1970 2011 
+1970 2000 
+1999 2012  
+
+#SR_shifts blank if Nsr_curves==1
+2000
 #Linf
 80.4	0.1	-4																																									
 #K
