@@ -5015,6 +5015,10 @@ FUNCTION Write_R
     R_report   << endl;
     R_Report(m_sigmar);
     R_Report(sigmar);
+    R_report << endl<< "$rec_dev"<< endl;
+    for (i=styr_rec;i<=endyr;i++)
+      R_report << i<< " "<<rec_dev(i)<<endl;
+    R_report   << endl;
 
     R_report   << "$F_Pen" <<endl;
     R_report<<fpen(1)<<"  "<<fpen(2)<<endl;
