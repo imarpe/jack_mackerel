@@ -465,10 +465,10 @@ DATA_SECTION
 
   int styr_fut
   int endyr_fut            // LAst year for projections
-  int phase_Rzero
+  init_ivector phase_Rzero(1,Nsr_curves)
   int phase_nosr
   number Steepness_UB
-  !! phase_Rzero =  4;
+  // !! phase_Rzero =  4;
   !! phase_nosr  = -3;
   
   vector yy_sr(styr_sp,endyr+nproj_yrs);
