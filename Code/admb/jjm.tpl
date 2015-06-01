@@ -338,12 +338,21 @@ DATA_SECTION
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
-  init_vector styr_rec_est(1,Nsr_curves)
-  init_vector endyr_rec_est(1,Nsr_curves)
+  init_ivector nrecs_est_shift(1,Nsr_curves)
+  init_imatrix yr_rec_est(1,Nsr_curves,1,nrecs_est_shift)
+  ivector styr_rec_est(1,Nsr_curves)
+  ivector endyr_rec_est(1,Nsr_curves)
+ LOCAL_CALCS
+  for (i=1;i<=Nsr_curves;i++)
+  {
+    styr_rec_est(i) = yr_rec_est(i,1);
+    endyr_rec_est(i) = yr_rec_est(i,nrecs_est_shift(i));
+  }
+ END_CALCS
   !! log_input(styr_rec_est);
   !! log_input(endyr_rec_est);
+  !! log_input(yr_rec_est);
   int nrecs_est;
-  vector nrecs_est_shift(1,Nsr_curves);
   init_ivector sr_shift(1,Nsr_curves-1)
   ivector yy_shift_st(1,Nsr_curves)
   ivector yy_shift_end(1,Nsr_curves)
@@ -355,7 +364,6 @@ DATA_SECTION
     yy_shift_st(i) = sr_shift(i-1);
     yy_shift_end(i-1) = sr_shift(i-1)-1;
   }
-  nrecs_est_shift = endyr_rec_est - styr_rec_est + 1.; //OjO!!! en vez de nrecs_est
  END_CALCS
 
 //-----GROWTH PARAMETERS--------------------------------------------------
@@ -889,7 +897,7 @@ DATA_SECTION
          nyrs_ind_age(k) -= 1;
     }
   }
-  endyr_rec_est -= retro;
+  endyr_rec_est = endyr_rec_est - retro;
   endyr         = endyr - retro;
   styr_fut      = endyr+1;
   endyr_fut     = endyr + nproj_yrs; 
@@ -1155,8 +1163,8 @@ PARAMETER_SECTION
   init_number_vector log_sigmar(1,Nsr_curves,phase_sigmar);
   vector m_sigmarsq(1,Nsr_curves)  
   vector m_sigmar(1,Nsr_curves)
-  vector sigmarsq  
-  vector sigmar
+  vector sigmarsq(1,Nsr_curves)  
+  vector sigmar(1,Nsr_curves)
   vector alpha(1,Nsr_curves)   
   vector beta(1,Nsr_curves)   
   number Bzero   
@@ -2220,16 +2228,25 @@ FUNCTION Rec_Like
       dvar_vector chi(styr_rec_est(1),endyr_rec_est(Nsr_curves));
       for (i=1;i<=Nsr_curves;i++)
       {
-        chi(styr_rec_est(i),endyr_rec_est(i)) = log(mod_rec(styr_rec_est(i),endyr_rec_est(i))) - log(pred_rec(styr_rec_est(i),endyr_rec_est(i)));
+        for (j=1;j<=nrecs_est_shift(i);j++)
+        {
+          chi(yr_rec_est(i,j)) = log(mod_rec(yr_rec_est(i,j))) - log(pred_rec(yr_rec_est(i,j)));
+        }
         SSQRec(i)   = norm2( chi(styr_rec_est(i),endyr_rec_est(i)) ) ;
         m_sigmarsq(i) =  SSQRec(i)/nrecs_est_shift(i);
         m_sigmar(i)   =  sqrt(m_sigmarsq(i));
       }
 
       if (current_phase()>4||last_phase())
-        rec_like(1) += sum(elem_div(SSQRec+ m_sigmarsq/2.,2*sigmarsq) + elem_prod(nrecs_est_shift,log_sigmar)); 
+        for (i=1;i<=Nsr_curves;i++)
+        {
+          rec_like(1) += (SSQRec(i)+ m_sigmarsq(i)/2.)/(2*sigmarsq(i)) + nrecs_est_shift(i)*log_sigmar(i); 
+        }
       else
-        rec_like(1) += .1*sum(elem_div(SSQRec+ m_sigmarsq/2.,2*sigmarsq) + elem_prod(nrecs_est_shift,log_sigmar)); 
+        for (i=1;i<=Nsr_curves;i++)
+        {
+          rec_like(1) += .1*((SSQRec(i)+ m_sigmarsq(i)/2.)/(2*sigmarsq(i)) + nrecs_est_shift(i)*log_sigmar(i)); 
+        }
     }
 
     if (last_phase())
@@ -2246,12 +2263,24 @@ FUNCTION Rec_Like
         if ( (styr_rec_est(i)-1) > endyr_rec_est(i-1) )
           rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(i-1)+1,styr_rec_est(i)-1) )/sigmarsq(i-1) + ((styr_rec_est(i)-1)-(endyr_rec_est(i-1)+1))*log(sigmar(i-1)) ;
       }
+      
+      for (i=1;i<=Nsr_curves;i++)
+      {
+        for (j=1;j<=(nrecs_est_shift(i)-1);j++)
+        {
+          if ((yr_rec_est(i,j+1)-yr_rec_est(i,j)) > 1)
+            rec_like(4) += .5*norm2( rec_dev(yr_rec_est(i,j)+1,yr_rec_est(i,j+1)-1) )/sigmarsq(i) + ((yr_rec_est(i,j+1)-1)-(yr_rec_est(i,j)+1))*log(sigmar(i)) ;
+        }
+      }
     }
     else // JNI comment next line
     {
       for (i=1;i<=Nsr_curves;i++)
       {
-        rec_like(2) += norm2( rec_dev(styr_rec_est(i),endyr_rec_est(i)) ) ;
+        for (j=1;j<=nrecs_est_shift(i);j++)
+        {
+          rec_like(2) += square(rec_dev(yr_rec_est(i,j)));
+        }
       }
     }
 
