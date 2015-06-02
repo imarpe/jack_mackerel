@@ -2226,6 +2226,7 @@ FUNCTION Rec_Like
       dvar_vector SSQRec(1,Nsr_curves);
       SSQRec.initialize();
       dvar_vector chi(styr_rec_est(1),endyr_rec_est(Nsr_curves));
+      chi.initialize();
       for (i=1;i<=Nsr_curves;i++)
       {
         for (j=1;j<=nrecs_est_shift(i);j++)
