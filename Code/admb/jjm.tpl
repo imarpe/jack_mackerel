@@ -1167,7 +1167,7 @@ PARAMETER_SECTION
   vector sigmar(1,Nsr_curves)
   vector alpha(1,Nsr_curves)   
   vector beta(1,Nsr_curves)   
-  number Bzero   
+  vector Bzero(1,Nsr_curves)   
   vector Rzero(1,Nsr_curves)   
   vector phizero(1,Nsr_curves)
   number avg_rec_dev   
@@ -1955,6 +1955,35 @@ FUNCTION Get_Numbers_at_Age
     Catch_at_Age(i);
     Sp_Biom(i)  = elem_prod(natage(i),pow(S(i),spmo_frac)) * wt_mature; 
     if (i<endyr) mod_rec(i+1)  = natage(i+1,1);
+  }
+  
+  for (i=2; i<=Nsr_curves; i++)
+  {
+    Bzero(i) = Sp_Biom((sr_shift(i-1)-nages)+1) ;
+  }
+
+  for (i=1; i<=Nsr_curves; i++)
+  {
+    phizero(i) = Bzero(i)/Rzero(i);
+
+    switch (SrType)
+    {
+      case 1:
+        alpha(i) = log(-4.*steepness(i)/(steepness(i)-1.));
+        break;
+      case 2:
+      {
+        alpha(i)  =  Bzero(i) * (1. - (steepness(i) - 0.2) / (0.8*steepness(i)) ) / Rzero(i);
+        beta(i)   = (5. * steepness(i) - 1.) / (4. * steepness(i) * Rzero(i));
+      }
+      break;
+      case 4:
+      {
+        beta(i)  = log(5.*steepness(i))/(0.8*Bzero(i)) ;
+        alpha(i) = log(Rzero(i)/Bzero(i))+beta(i)*Bzero(i);
+      }
+        break;
+    }
   }
 
 FUNCTION Get_Survey_Predictions
@@ -2775,7 +2804,7 @@ FUNCTION get_msy
     Rtmp     = ttt(3);
     MSY      = ttt(2);
     Bmsy     = ttt(1);
-    MSYL     = ttt(1)/Bzero;
+    MSYL     = ttt(1)/Bzero(yy_sr(endyr));
     lnFmsy   = log(MSY/ttt(5)); // Exploitation fraction relative to total biomass
     Bcur_Bmsy= Sp_Biom(endyr)/Bmsy;
 
@@ -2849,7 +2878,7 @@ FUNCTION void get_msy(int iyr)
     Rtmp     = ttt(3);
     MSY      = ttt(2);
     Bmsy     = ttt(1);
-    MSYL     = ttt(1)/Bzero;
+    MSYL     = ttt(1)/Bzero(yy_sr(iyr));
     lnFmsy   = log(MSY/ttt(5)); // Exploitation fraction relative to total biomass
     Bcur_Bmsy= Sp_Biom(iyr)/Bmsy;
 
@@ -3137,7 +3166,7 @@ FUNCTION dvar_vector SRecruit(const dvar_vector& Stmp, const int& Nsr_tmp)
   switch (SrType)
   {
     case 1:
-      RecTmp = elem_prod((Stmp / phizero(Nsr_tmp)) , mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero ))) ; //Ricker form from Dorn
+      RecTmp = elem_prod((Stmp / phizero(Nsr_tmp)) , mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) ))) ; //Ricker form from Dorn
       break;
     case 2:
       RecTmp = elem_prod(Stmp , 1. / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp));        //Beverton-Holt form
@@ -3158,7 +3187,7 @@ FUNCTION dvariable SRecruit(const double& Stmp, const int& Nsr_tmp)
   switch (SrType)
   {
     case 1:
-      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero )) ; //Ricker form from Dorn
+      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) )) ; //Ricker form from Dorn
       break;
     case 2:
       RecTmp = Stmp / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp);        //Beverton-Holt form
@@ -3179,7 +3208,7 @@ FUNCTION dvariable SRecruit(const dvariable& Stmp,const int& Nsr_tmp)
   switch (SrType)
   {
     case 1:
-      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero )) ; //Ricker form from Dorn
+      RecTmp = (Stmp / phizero(Nsr_tmp)) * mfexp( alpha(Nsr_tmp) * ( 1. - Stmp / Bzero(Nsr_tmp) )) ; //Ricker form from Dorn
       break;
     case 2:
       RecTmp = Stmp / ( alpha(Nsr_tmp) + beta(Nsr_tmp) * Stmp);        //Beverton-Holt form
@@ -3210,32 +3239,9 @@ FUNCTION Get_Bzero
     natagetmp(styr_rec,j) = natagetmp(styr_rec,j-1) * survtmp(j-1);
   natagetmp(styr_rec,nages) /= (1.-survtmp(nages)); 
 
-  Bzero = elem_prod(wt_mature , pow(survtmp,spmo_frac))*natagetmp(styr_rec) ;
-  for (i=1; i<=Nsr_curves; i++)
-  {
-    phizero(i) = Bzero/Rzero(i);
-
-    switch (SrType)
-    {
-      case 1:
-        alpha(i) = log(-4.*steepness(i)/(steepness(i)-1.));
-        break;
-      case 2:
-      {
-        alpha(i)  =  Bzero * (1. - (steepness(i) - 0.2) / (0.8*steepness(i)) ) / Rzero(i);
-        beta(i)   = (5. * steepness(i) - 1.) / (4. * steepness(i) * Rzero(i));
-      }
-      break;
-      case 4:
-      {
-        beta(i)  = log(5.*steepness(i))/(0.8*Bzero) ;
-        alpha(i) = log(Rzero(i)/Bzero)+beta(i)*Bzero;
-      }
-        break;
-    }
-  }
+  Bzero(1) = elem_prod(wt_mature , pow(survtmp,spmo_frac))*natagetmp(styr_rec) ;
   Sp_Biom.initialize();
-  Sp_Biom(styr_sp,styr_rec-1) = Bzero;
+  Sp_Biom(styr_sp,styr_rec-1) = Bzero(1);
   for (i=styr_rec;i<styr;i++)
   {
     Sp_Biom(i) = elem_prod(natagetmp(i),pow(survtmp,spmo_frac)) * wt_mature; 
@@ -3258,7 +3264,7 @@ FUNCTION dvariable Requil(dvariable& phi, int iyr)
   switch (SrType)
   {
     case 1:
-      RecTmp =  Bzero * (alpha(yy_sr(iyr)) + log(phi) - log(phizero(yy_sr(iyr))) ) / (alpha(yy_sr(iyr))*phi);
+      RecTmp =  Bzero(yy_sr(iyr)) * (alpha(yy_sr(iyr)) + log(phi) - log(phizero(yy_sr(iyr))) ) / (alpha(yy_sr(iyr))*phi);
       break;
     case 2:
       RecTmp =  (phi-alpha(yy_sr(iyr)))/(beta(yy_sr(iyr))*phi);
@@ -3501,7 +3507,7 @@ REPORT_SECTION
       dvariable stock;
       for (i=1;i<=30;i++)
       {
-        stock = double (i) * Bzero /25.;
+        stock = double (i) * Bzero(j) /25.;
         if (active(log_Rzero(1)))
           report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
@@ -4981,7 +4987,7 @@ FUNCTION Write_R
       dvariable stock;
       for (i=1;i<=30;i++)
       {
-        stock = double (i) * Bzero /25.;
+        stock = double (i) * Bzero(j) /25.;
         if (active(log_Rzero(1)))
           R_report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
@@ -5304,7 +5310,7 @@ FUNCTION Write_R
             " "<< MSY                         <<
             " "<< MSYL                        <<
             " "<< Bmsy                        <<
-            " "<< Bzero                       <<
+            " "<< Bzero(yy_sr(i))                       <<
             " "<< Sp_Biom(i)                  <<
             " "<< Bcur_Bmsy                   <<
             endl ;
