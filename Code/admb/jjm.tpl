@@ -3507,7 +3507,7 @@ REPORT_SECTION
       dvariable stock;
       for (i=1;i<=30;i++)
       {
-        stock = double (i) * Bzero(j) /25.;
+        stock = double (i) * max(Bzero) /25.;
         if (active(log_Rzero(1)))
           report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
@@ -4987,7 +4987,7 @@ FUNCTION Write_R
       dvariable stock;
       for (i=1;i<=30;i++)
       {
-        stock = double (i) * Bzero(j) /25.;
+        stock = double (i) * max(Bzero) /25.;
         if (active(log_Rzero(1)))
           R_report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
