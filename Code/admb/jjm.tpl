@@ -1959,7 +1959,7 @@ FUNCTION Get_Numbers_at_Age
   
   for (i=2; i<=Nsr_curves; i++)
   {
-    Bzero(i) = Sp_Biom((sr_shift(i-1)-nages)+1) ;
+    Bzero(i) = Sp_Biom(sr_shift(i-1)-rec_age) ;  //sr_shift(i-1)-rec_age //(sr_shift(i-1)-nages)+1
   }
 
   for (i=1; i<=Nsr_curves; i++)
@@ -3150,7 +3150,7 @@ FUNCTION Profile_F
   prof_F <<"Profile of stock, yield, and recruitment over F"<<endl;
   prof_F << model_name<<" "<<datafile_name<<endl;
   prof_F <<endl<<endl<<"F  Stock  Yld  Recruit SPR"<<endl;
-  prof_F <<0.0<<" "<< Bzero <<" "<<0.0<<" "<<Rzero<< " 1.00"<<endl; 
+  prof_F <<0.0<<" "<< Bzero(Nsr_curves) <<" "<<0.0<<" "<<Rzero(Nsr_curves)<< " 1.00"<<endl; 
   dvar_vector ttt(1,5);
   for (int ii=1;ii<=500;ii++)
   {
