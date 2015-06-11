@@ -3505,9 +3505,9 @@ REPORT_SECTION
     for (j=1;j<=Nsr_curves;j++)
     {
       dvariable stock;
-      for (i=1;i<=30;i++)
+      for (i=1;i<=300;i++)
       {
-        stock = double (i) * max(Bzero) /25.;
+        stock = double (i) * max(Bzero) /250.;
         if (active(log_Rzero(1)))
           report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
@@ -4985,9 +4985,9 @@ FUNCTION Write_R
       R_report <<"$stock_Rec_Curve_"<< (j) <<endl;
       R_report <<"0 0"<<endl;
       dvariable stock;
-      for (i=1;i<=30;i++)
+      for (i=1;i<=300;i++)
       {
-        stock = double (i) * max(Bzero) /25.;
+        stock = double (i) * max(Bzero) /250.;
         if (active(log_Rzero(1)))
           R_report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
