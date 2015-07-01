@@ -2086,7 +2086,7 @@ FUNCTION Calc_Dependent_Vars
     depletion         = totbiom(endyr)/totbiom(styr);
     depletion_dyn     = totbiom(endyr)/totbiom_NoFish(endyr);
   }
-  B100 = phizero(yy_sr(endyr)) * mean(recruits(styr_rec_est(1),endyr_rec_est(Nsr_curves))); //falta!!! /falta!!!
+  B100 = phizero(yy_sr(styr)) * mean(recruits(styr_rec_est(1),endyr_rec_est(Nsr_curves))); //Ojo
   dvar_vector Nnext(1,nages);
   Nnext(2,nages) = ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1));
   Nnext(nages)  += natage(endyr,nages)*S(endyr,nages);
@@ -3509,7 +3509,7 @@ REPORT_SECTION
       {
         stock = double (i) * max(Bzero) /250.;
         if (active(log_Rzero(j)))
-          report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
+          report << stock <<" "<< SRecruit(stock, j)<<endl;
         else
           report << stock <<" 99 "<<endl;
       }
@@ -4127,7 +4127,7 @@ FUNCTION Write_SimDatafile
     // fill vector with unit normal RVs
     sim_rec_devs.fill_randn(rng);
     sim_rec_devs *= value(sigmar(1));
-    sim_natage(styr_rec,1) = value(Rzero(1))*exp(sim_rec_devs(styr_rec)); //falta!!
+    sim_natage(styr_rec,1) = value(Rzero(1))*exp(sim_rec_devs(styr_rec));
     for (j=2; j<=nages; j++)
       sim_natage(styr_rec,j) = sim_natage(styr_rec,j-1) * survtmp;
     sim_natage(styr_rec,nages) /= (1.-survtmp); 
@@ -4989,7 +4989,7 @@ FUNCTION Write_R
       {
         stock = double (i) * max(Bzero) /250.;
         if (active(log_Rzero(j)))
-          R_report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
+          R_report << stock <<" "<< SRecruit(stock, j)<<endl;
         else
           R_report << stock <<" 99 "<<endl;
       }
