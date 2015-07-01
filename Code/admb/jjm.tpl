@@ -2173,13 +2173,13 @@ FUNCTION evaluate_the_objective_function
   Srv_Like();
   Sel_Like();
   Compute_priors();
-  if (active(log_Rzero(1))) // OjO
-    for (i=1;i<=Nsr_curves;i++)
-    {
+  for (i=1;i<=Nsr_curves;i++)
+  {
+    if (active(log_Rzero(i)))
       obj_fun += .5 * square(log_Rzero(i)-mean_log_rec(i));
-    }
-    //obj_fun += sum(.5 * square(log_Rzero(1)-mean_log_rec(1))); // A slight penalty to keep Rzero in reality...
-
+  }
+  //obj_fun += sum(.5 * square(log_Rzero(1)-mean_log_rec(1))); // A slight penalty to keep Rzero in reality...
+  
   obj_comps.initialize();
   obj_comps(1)  = sum(catch_like);
   obj_comps(2)  = sum(age_like_fsh);
@@ -3494,7 +3494,7 @@ REPORT_SECTION
 
     report << endl<< "Stock Recruitment stuff "<< endl;
     for (i=styr_rec;i<=endyr;i++)
-      if (active(log_Rzero(1)))
+      if (active(log_Rzero(yy_sr(i))))
         report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age),yy_sr(i))<< " "<< mod_rec(i)<<endl;
       else 
         report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< " 999" << " "<< mod_rec(i)<<endl;
@@ -3508,7 +3508,7 @@ REPORT_SECTION
       for (i=1;i<=300;i++)
       {
         stock = double (i) * max(Bzero) /250.;
-        if (active(log_Rzero(1)))
+        if (active(log_Rzero(j)))
           report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
           report << stock <<" 99 "<<endl;
@@ -4966,7 +4966,7 @@ FUNCTION Write_R
     }
     R_report << endl<< "$Stock_Rec"<< endl;
     for (i=styr_rec;i<=endyr;i++)
-      if (active(log_Rzero(1)))
+      if (active(log_Rzero(yy_sr(i))))
         R_report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age),yy_sr(i))<< " "<< mod_rec(i)<<endl;
       else 
         R_report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< " 999" << " "<< mod_rec(i)<<endl;
@@ -4988,7 +4988,7 @@ FUNCTION Write_R
       for (i=1;i<=300;i++)
       {
         stock = double (i) * max(Bzero) /250.;
-        if (active(log_Rzero(1)))
+        if (active(log_Rzero(j)))
           R_report << stock <<" "<< SRecruit(stock, j)<<endl; //falta!!! //falta!!!
         else
           R_report << stock <<" 99 "<<endl;
