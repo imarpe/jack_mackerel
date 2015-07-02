@@ -349,31 +349,31 @@ DATA_SECTION
   !! projfile_name = cntrlfile_name(1,length(cntrlfile_name)-4) + ".prj";
 
   
-  init_int    Nsr_curves
-  !! log_input(Nsr_curves);
+  init_int    nreg
+  !! log_input(nreg);
   init_int    SrType        // 2 Bholt, 1 Ricker
   !! log_input(SrType);
   init_int use_age_err      // nonzero value means use...
   !! log_input(use_age_err);
   init_int retro            // Retro years to peel off (0 means full dataset)
   !! log_input(retro);
-  init_vector steepnessprior(1,Nsr_curves)
-  init_vector cvsteepnessprior(1,Nsr_curves)
-  init_ivector    phase_srec(1,Nsr_curves)
+  init_vector steepnessprior(1,nreg)
+  init_vector cvsteepnessprior(1,nreg)
+  init_ivector    phase_srec(1,nreg)
 
-  init_vector sigmarprior(1,Nsr_curves)
-  vector log_sigmarprior(1,Nsr_curves)
-  init_vector cvsigmarprior(1,Nsr_curves)
-  init_ivector    phase_sigmar(1,Nsr_curves)
+  init_vector sigmarprior(1,nreg)
+  vector log_sigmarprior(1,nreg)
+  init_vector cvsigmarprior(1,nreg)
+  init_ivector    phase_sigmar(1,nreg)
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
-  init_ivector nrecs_est_shift(1,Nsr_curves)
-  init_imatrix yr_rec_est(1,Nsr_curves,1,nrecs_est_shift)
-  ivector styr_rec_est(1,Nsr_curves)
-  ivector endyr_rec_est(1,Nsr_curves)
+  init_ivector nrecs_est_shift(1,nreg)
+  init_imatrix yr_rec_est(1,nreg,1,nrecs_est_shift)
+  ivector styr_rec_est(1,nreg)
+  ivector endyr_rec_est(1,nreg)
  LOCAL_CALCS
-  for (i=1;i<=Nsr_curves;i++)
+  for (i=1;i<=nreg;i++)
   {
     styr_rec_est(i) = yr_rec_est(i,1);
     endyr_rec_est(i) = yr_rec_est(i,nrecs_est_shift(i));
@@ -383,13 +383,13 @@ DATA_SECTION
   !! log_input(endyr_rec_est);
   !! log_input(yr_rec_est);
   int nrecs_est;
-  init_ivector sr_shift(1,Nsr_curves-1)
-  ivector yy_shift_st(1,Nsr_curves)
-  ivector yy_shift_end(1,Nsr_curves)
+  init_ivector sr_shift(1,nreg-1)
+  ivector yy_shift_st(1,nreg)
+  ivector yy_shift_end(1,nreg)
  LOCAL_CALCS
   yy_shift_st(1) = styr_rec;
-  yy_shift_end(Nsr_curves) = endyr;
-  for (i=2;i<=Nsr_curves;i++)
+  yy_shift_end(nreg) = endyr;
+  for (i=2;i<=nreg;i++)
   {
     yy_shift_st(i) = sr_shift(i-1);
     yy_shift_end(i-1) = sr_shift(i-1)-1;
@@ -503,7 +503,7 @@ DATA_SECTION
 
   int styr_fut
   int endyr_fut            // LAst year for projections
-  init_ivector phase_Rzero(1,Nsr_curves)
+  init_ivector phase_Rzero(1,nreg)
   int phase_nosr
   number Steepness_UB
   // !! phase_Rzero =  4;
@@ -512,7 +512,7 @@ DATA_SECTION
   vector yy_sr(styr_sp,endyr+nproj_yrs);
  LOCAL_CALCS
   yy_sr = 1;
-  for (i=2;i<=Nsr_curves;i++)
+  for (i=2;i<=nreg;i++)
   {
     for (j=sr_shift(i-1);j<=endyr+nproj_yrs;j++)
     {
@@ -1062,7 +1062,7 @@ DATA_SECTION
     write_input_log<<"# Number of projection years " <<endl<<nproj_yrs<<" "<<endl;// cin>>junk;
 
  END_CALCS
-  vector R_guess(1,Nsr_curves)
+  vector R_guess(1,nreg)
 
   vector offset_ind(1,nind)
   vector offset_fsh(1,nfsh)
@@ -1126,7 +1126,7 @@ DATA_SECTION
   // Compute an initial Rzero value based on exploitation 
    double btmp=0.;
    //double ctmp=0.;
-   dvector ctmp(1,Nsr_curves);
+   dvector ctmp(1,nreg);
    ctmp.initialize();
    dvector ntmp(1,nages);
    ntmp(1) = 1.;
@@ -1134,12 +1134,12 @@ DATA_SECTION
      ntmp(a) = ntmp(a-1)*exp(-natmortprior-.05);
    btmp = wt_pop * ntmp;
    write_input_log << "Mean Catch"<<endl;
-   ivector yy_shift_st_tmp(1,Nsr_curves);
-   ivector yy_shift_end_tmp(1,Nsr_curves);
+   ivector yy_shift_st_tmp(1,nreg);
+   ivector yy_shift_end_tmp(1,nreg);
    yy_shift_st_tmp = yy_shift_st;
    yy_shift_st_tmp(1) = styr;
    yy_shift_end_tmp = yy_shift_end;
-   for (i=1;i<=Nsr_curves;i++)
+   for (i=1;i<=nreg;i++)
    {
      for (j=1;j<=nfsh;j++)
      {
@@ -1183,23 +1183,23 @@ PARAMETER_SECTION
 
 
  // Stock rectuitment params
-  init_number_vector mean_log_rec(1,Nsr_curves,1); 
-  init_bounded_number_vector steepness(1,Nsr_curves,0.21,Steepness_UB,phase_srec)
-  init_number_vector log_Rzero(1,Nsr_curves,phase_Rzero)  
+  init_number_vector mean_log_rec(1,nreg,1); 
+  init_bounded_number_vector steepness(1,nreg,0.21,Steepness_UB,phase_srec)
+  init_number_vector log_Rzero(1,nreg,phase_Rzero)  
   // OjO
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
   init_bounded_vector rec_dev(styr_rec,endyr,-15,15,2)
   // init_vector rec_dev(styr_rec,endyr,2)
-  init_number_vector log_sigmar(1,Nsr_curves,phase_sigmar);
-  vector m_sigmarsq(1,Nsr_curves)  
-  vector m_sigmar(1,Nsr_curves)
-  vector sigmarsq(1,Nsr_curves)  
-  vector sigmar(1,Nsr_curves)
-  vector alpha(1,Nsr_curves)   
-  vector beta(1,Nsr_curves)   
-  vector Bzero(1,Nsr_curves)   
-  vector Rzero(1,Nsr_curves)   
-  vector phizero(1,Nsr_curves)
+  init_number_vector log_sigmar(1,nreg,phase_sigmar);
+  vector m_sigmarsq(1,nreg)  
+  vector m_sigmar(1,nreg)
+  vector sigmarsq(1,nreg)  
+  vector sigmar(1,nreg)
+  vector alpha(1,nreg)   
+  vector beta(1,nreg)   
+  vector Bzero(1,nreg)   
+  vector Rzero(1,nreg)   
+  vector phizero(1,nreg)
   number avg_rec_dev   
 
  // Fishing mortality parameters
@@ -1987,12 +1987,12 @@ FUNCTION Get_Numbers_at_Age
     if (i<endyr) mod_rec(i+1)  = natage(i+1,1);
   }
   
-  for (i=2; i<=Nsr_curves; i++)
+  for (i=2; i<=nreg; i++)
   {
     Bzero(i) = Sp_Biom(sr_shift(i-1)-rec_age) ;  //sr_shift(i-1)-rec_age //(sr_shift(i-1)-nages)+1
   }
 
-  for (i=1; i<=Nsr_curves; i++)
+  for (i=1; i<=nreg; i++)
   {
     phizero(i) = Bzero(i)/Rzero(i);
 
@@ -2116,7 +2116,7 @@ FUNCTION Calc_Dependent_Vars
     depletion         = totbiom(endyr)/totbiom(styr);
     depletion_dyn     = totbiom(endyr)/totbiom_NoFish(endyr);
   }
-  B100 = phizero(yy_sr(styr)) * mean(recruits(styr_rec_est(1),endyr_rec_est(Nsr_curves))); //Ojo
+  B100 = phizero(yy_sr(styr)) * mean(recruits(styr_rec_est(1),endyr_rec_est(nreg))); //Ojo
   dvar_vector Nnext(1,nages);
   Nnext(2,nages) = ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1));
   Nnext(nages)  += natage(endyr,nages)*S(endyr,nages);
@@ -2203,7 +2203,7 @@ FUNCTION evaluate_the_objective_function
   Srv_Like();
   Sel_Like();
   Compute_priors();
-  for (i=1;i<=Nsr_curves;i++)
+  for (i=1;i<=nreg;i++)
   {
     if (active(log_Rzero(i)))
       obj_fun += .5 * square(log_Rzero(i)-mean_log_rec(i));
@@ -2274,7 +2274,7 @@ FUNCTION Rec_Like
     sigmarsq   =  square(sigmar);
     if (current_phase()>2)
     {
-      for (i=1;i<=Nsr_curves;i++)
+      for (i=1;i<=nreg;i++)
       {
         if (last_phase())
           pred_rec(yy_shift_st(i),yy_shift_end(i)) = SRecruit(Sp_Biom(yy_shift_st(i)-rec_age,yy_shift_end(i)-rec_age).shift(yy_shift_st(i))(yy_shift_st(i),yy_shift_end(i)),i)(yy_shift_st(i),yy_shift_end(i));
@@ -2282,11 +2282,11 @@ FUNCTION Rec_Like
           pred_rec(yy_shift_st(i),yy_shift_end(i)) = .1+SRecruit(Sp_Biom(yy_shift_st(i)-rec_age,yy_shift_end(i)-rec_age).shift(yy_shift_st(i))(yy_shift_st(i),yy_shift_end(i)),i)(yy_shift_st(i),yy_shift_end(i));
       }
 
-      dvar_vector SSQRec(1,Nsr_curves);
+      dvar_vector SSQRec(1,nreg);
       SSQRec.initialize();
-      dvar_vector chi(styr_rec_est(1),endyr_rec_est(Nsr_curves));
+      dvar_vector chi(styr_rec_est(1),endyr_rec_est(nreg));
       chi.initialize();
-      for (i=1;i<=Nsr_curves;i++)
+      for (i=1;i<=nreg;i++)
       {
         for (j=1;j<=nrecs_est_shift(i);j++)
         {
@@ -2298,12 +2298,12 @@ FUNCTION Rec_Like
       }
 
       if (current_phase()>4||last_phase())
-        for (i=1;i<=Nsr_curves;i++)
+        for (i=1;i<=nreg;i++)
         {
           rec_like(1) += (SSQRec(i)+ m_sigmarsq(i)/2.)/(2*sigmarsq(i)) + nrecs_est_shift(i)*log_sigmar(i); 
         }
       else
-        for (i=1;i<=Nsr_curves;i++)
+        for (i=1;i<=nreg;i++)
         {
           rec_like(1) += .1*((SSQRec(i)+ m_sigmarsq(i)/2.)/(2*sigmarsq(i)) + nrecs_est_shift(i)*log_sigmar(i)); 
         }
@@ -2315,16 +2315,16 @@ FUNCTION Rec_Like
       if ( styr_rec_est(1) > styr_rec )
         rec_like(4) += .5*norm2( rec_dev(styr_rec,styr_rec_est(1)-1) )/sigmarsq(1) + ((styr_rec_est(1)-1)-styr_rec)*log(sigmar(1)) ;
       
-      if ( endyr > endyr_rec_est(Nsr_curves) )
-        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(Nsr_curves)+1,endyr) )/sigmarsq(Nsr_curves) + (endyr-(endyr_rec_est(Nsr_curves)+1))*log(sigmar(Nsr_curves)) ;
+      if ( endyr > endyr_rec_est(nreg) )
+        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(nreg)+1,endyr) )/sigmarsq(nreg) + (endyr-(endyr_rec_est(nreg)+1))*log(sigmar(nreg)) ;
       
-      for (i=2;i<=Nsr_curves;i++)
+      for (i=2;i<=nreg;i++)
       {
         if ( (styr_rec_est(i)-1) > endyr_rec_est(i-1) )
           rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(i-1)+1,styr_rec_est(i)-1) )/sigmarsq(i-1) + ((styr_rec_est(i)-1)-(endyr_rec_est(i-1)+1))*log(sigmar(i-1)) ;
       }
       
-      for (i=1;i<=Nsr_curves;i++)
+      for (i=1;i<=nreg;i++)
       {
         for (j=1;j<=(nrecs_est_shift(i)-1);j++)
         {
@@ -2335,7 +2335,7 @@ FUNCTION Rec_Like
     }
     else // JNI comment next line
     {
-      for (i=1;i<=Nsr_curves;i++)
+      for (i=1;i<=nreg;i++)
       {
         for (j=1;j<=nrecs_est_shift(i);j++)
         {
@@ -2349,7 +2349,7 @@ FUNCTION Rec_Like
     if (active(rec_dev_future))
     {
       // Future recruitment variability (based on past)
-      sigmar_fut   = sigmar(Nsr_curves) ;
+      sigmar_fut   = sigmar(nreg) ;
       rec_like(3) += norm2(rec_dev_future)/(2*square(sigmar_fut))+ size_count(rec_dev_future)*log(sigmar_fut);
     }
   }
@@ -2381,13 +2381,13 @@ FUNCTION Compute_priors
     for (int i=1;i<=npars_rw_M;i++)
       post_priors(1) +=  square(M_rw(i))/ (2.*sigma_rw_M(i)*sigma_rw_M(i)) ;
 
-  for (int i=1;i<=Nsr_curves;i++)
+  for (int i=1;i<=nreg;i++)
   {
     if (active(steepness(i)))
       post_priors(2) += square(log(steepness(i)/steepnessprior(i)))/(2*cvsteepnessprior(i)*cvsteepnessprior(i)); 
   }
 
-  for (int i=1;i<=Nsr_curves;i++)
+  for (int i=1;i<=nreg;i++)
   {
     if (active(log_sigmar(i)))
       post_priors(3) += square(log(sigmar(i)/sigmarprior(i)))/(2*cvsigmarprior(i)*cvsigmarprior(i)); 
@@ -3180,7 +3180,7 @@ FUNCTION Profile_F
   prof_F <<"Profile of stock, yield, and recruitment over F"<<endl;
   prof_F << model_name<<" "<<datafile_name<<endl;
   prof_F <<endl<<endl<<"F  Stock  Yld  Recruit SPR"<<endl;
-  prof_F <<0.0<<" "<< Bzero(Nsr_curves) <<" "<<0.0<<" "<<Rzero(Nsr_curves)<< " 1.00"<<endl; 
+  prof_F <<0.0<<" "<< Bzero(nreg) <<" "<<0.0<<" "<<Rzero(nreg)<< " 1.00"<<endl; 
   dvar_vector ttt(1,5);
   for (int ii=1;ii<=500;ii++)
   {
@@ -3360,21 +3360,21 @@ REPORT_SECTION
         Ftot += F(k);
     log_param(Mest);
     //log_param(mean_log_rec);
-    for (int i=1;i<=Nsr_curves;i++)
+    for (int i=1;i<=nreg;i++)
     {
       log_param(mean_log_rec(i));
     }
-    for (int i=1;i<=Nsr_curves;i++)
+    for (int i=1;i<=nreg;i++)
     {
       log_param(steepness(i));
     }
-    for (int i=1;i<=Nsr_curves;i++)
+    for (int i=1;i<=nreg;i++)
     {
       log_param(log_Rzero(i));
     }
     //log_param(log_Rzero);
     log_param(rec_dev);
-    for (int i=1;i<=Nsr_curves;i++)
+    for (int i=1;i<=nreg;i++)
     {
       log_param(log_sigmar(i));
     }
@@ -3532,7 +3532,7 @@ REPORT_SECTION
     report << endl<< "Curve to plot "<< endl;
     report <<"stock Recruitment"<<endl;
     report <<"0 0 "<<endl;
-    for (j=1;j<=Nsr_curves;j++)
+    for (j=1;j<=nreg;j++)
     {
       dvariable stock;
       for (i=1;i<=300;i++)
@@ -3679,7 +3679,7 @@ REPORT_SECTION
   report<<"sigmarprior,_CV,_phase: " <<sigmarprior<<" "<<  cvsigmarprior <<" "<<phase_sigmar<<endl;
 
   report<<"Rec_estimated_in_styr_endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
-  for (i=1;i<=Nsr_curves;i++)
+  for (i=1;i<=nreg;i++)
     report<<"SR_Curve_fit__in_styr_endyr_" <<i<<" : " <<styr_rec_est(i)<<" "<<endyr_rec_est(i)<<" "<<endl;
   report<<"Model_styr_endyr:            " <<styr        <<" "<<endyr        <<" "<<endl;
 
@@ -5003,14 +5003,14 @@ FUNCTION Write_R
         
         R_report   << endl;
 
-    for (j=1;j<=Nsr_curves;j++)
+    for (j=1;j<=nreg;j++)
     {
       R_report <<"$SR_Curve_years_"<< (j) <<endl;
       R_report << yr_rec_est(j) <<endl;
     }
     R_report   << endl;
     
-    for (j=1;j<=Nsr_curves;j++)
+    for (j=1;j<=nreg;j++)
     {
       R_report <<"$stock_Rec_Curve_"<< (j) <<endl;
       R_report <<"0 0"<<endl;
@@ -5138,7 +5138,7 @@ FUNCTION Write_R
   R_report<<"$Rec_estimated_in_styr_endyr " <<endl;
   R_report<<styr_rec    <<" "<<endyr        <<" "<<endl;
   R_report   << endl;
-  for (i=1;i<=Nsr_curves;i++)
+  for (i=1;i<=nreg;i++)
   {
     R_report<<"$SR_Curve_fit__in_styr_endyr_" << (i) <<""<<endl;
     R_report<<styr_rec_est(i)<<" "<<endyr_rec_est(i)<<" "<<endl;
