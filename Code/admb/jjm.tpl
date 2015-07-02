@@ -146,6 +146,31 @@ DATA_SECTION
   vector aa(1,nages);
   !! aa.fill_seqadd(rec_age,1) ;
   int junk;
+// Stock specifics
+  init_int nstk                                   //Number of stocks
+  imatrix pstkname(1,nstk,1,2)
+  init_adstring stknameread;
+ LOCAL_CALCS
+  for(s=1;s<=nstk;s++) 
+  {
+    pstkname(s,1)=1; 
+    pstkname(s,2)=1;
+  }    // set whole array to equal 1 in case not enough names are read
+  adstring_array CRLF;   // blank to terminate lines
+  CRLF+="";
+  s=1;
+  for(i=1;i<=strlen(stknameread);i++)
+    if(adstring(stknameread(i))==adstring("%")) {
+      pstkname(s,2)=i-1; 
+      s++;  
+      pstkname(s,1)=i+1;
+    }
+  pstkname(nstk,2)=strlen(stknameread);
+  for(s=1;s<=nstk;s++)
+  {
+    stkname += stknameread(pstkname(s,1),pstkname(s,2))+CRLF(1);
+  }
+ END_CALCS
 // Fishery specifics
   init_int nfsh                                   //Number of fisheries
   imatrix pfshname(1,nfsh,1,2)
@@ -176,6 +201,8 @@ DATA_SECTION
   log_input(endyr);
   log_input(rec_age);
   log_input(oldest_age);
+  log_input(nstk);
+  log_input(stkname);
   log_input(nfsh);
   log_input(fshname);
  END_CALCS
@@ -280,13 +307,14 @@ DATA_SECTION
   vector age_vector(1,nages);
   !! for (j=1;j<=nages;j++)
   !!  age_vector(j) = double(j+rec_age-1);
-  init_vector wt_pop(1,nages)
+  init_matrix wt_pop(1,nstk,1,nages)
   !! log_input(wt_pop);
-  init_vector maturity(1,nages)
+  init_matrix maturity(1,nstk,1,nages)
   !! log_input(maturity);
   // !! if (max(maturity)>.9) maturity /=2.;
-  vector wt_mature(1,nages);
-  !! wt_mature = elem_prod(wt_pop,maturity) ;
+  matrix wt_mature(1,nstk,1,nages);
+  !! for (s=1;s<=nstk;s++)
+  !!  wt_mature(s) = elem_prod(wt_pop(s),maturity(s)) ;
 
   //Spawning month-----
   init_number spawnmo
@@ -296,6 +324,7 @@ DATA_SECTION
   init_matrix age_err(1,nages,1,nages)
   !! log_input(age_err);
 
+  int s // Index for stock
   int k // Index for fishery or index
   int i // Index for year
   int j // Index for age
@@ -306,12 +335,13 @@ DATA_SECTION
   *(ad_comm::global_datafile) >>  model_name; 
   log_input(cntrlfile_name);
  END_CALCS
-  // Matrix of selectivity mappings--row 1 is type (1=fishery, 2=index) and row 2 is index within that type
+  // Matrix of selectivity mappings--row 1 is index of stock
+  //  row 2 is type (1=fishery, 2=index) and row 3 is index within that type
   //  e.g., the following for 2 fisheries and 4 indices means that index 3 uses fishery 1 selectivities,
   //         the other fisheries and indices use their own parameterization
   //  1 1 2 2 1 2 
   //  1 2 1 2 1 4
-  init_imatrix sel_map(1,2,1,nfsh_and_ind) 
+  init_imatrix sel_map(1,3,1,nfsh_and_ind) 
   // maps fisheries and indices into sequential sel_map for sharing purposes
   !! log_input(datafile_name);
   !! log_input(model_name);
