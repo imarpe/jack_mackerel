@@ -349,113 +349,138 @@ DATA_SECTION
   !! projfile_name = cntrlfile_name(1,length(cntrlfile_name)-4) + ".prj";
 
   
-  init_int    nreg
+  init_ivector    nreg(1,nstk)
   !! log_input(nreg);
+  int nregs
+  !! nregs = sum(nreg);
+  vector cum_regs(1,nstk)
+ LOCAL_CALCS
+  cum_regs(1) = 0
+  for (i=2;i<=nstk;i++)
+  {
+    cum_regs(i) = sum(nreg(1,i-1));
+  }
+ END_CALCS
   init_int    SrType        // 2 Bholt, 1 Ricker
   !! log_input(SrType);
   init_int use_age_err      // nonzero value means use...
   !! log_input(use_age_err);
   init_int retro            // Retro years to peel off (0 means full dataset)
   !! log_input(retro);
-  init_vector steepnessprior(1,nreg)
-  init_vector cvsteepnessprior(1,nreg)
-  init_ivector    phase_srec(1,nreg)
+  init_matrix steepnessprior(1,nstk,1,nreg)
+  init_matrix cvsteepnessprior(1,nstk,1,nreg)
+  init_imatrix    phase_srec(1,nstk,1,nreg)
 
-  init_vector sigmarprior(1,nreg)
-  vector log_sigmarprior(1,nreg)
-  init_vector cvsigmarprior(1,nreg)
-  init_ivector    phase_sigmar(1,nreg)
+  init_matrix sigmarprior(1,nstk,1,nreg)
+  matrix log_sigmarprior(1,nstk,1,nreg)
+  init_matrix cvsigmarprior(1,nstk,1,nreg)
+  init_imatrix    phase_sigmar(1,nstk,1,nreg)
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
-  init_ivector nrecs_est_shift(1,nreg)
-  init_imatrix yr_rec_est(1,nreg,1,nrecs_est_shift)
-  ivector styr_rec_est(1,nreg)
-  ivector endyr_rec_est(1,nreg)
+  init_ivector nrecs_est_shift(1,nregs)
+  init_imatrix yr_rec_est(1,nregs,1,nrecs_est_shift)
+  imatrix styr_rec_est(1,nstk,1,nreg)
+  imatrix endyr_rec_est(1,nstk,1,nreg)
  LOCAL_CALCS
-  for (i=1;i<=nreg;i++)
+  for (i=1;i<=nstk;i++)
   {
-    styr_rec_est(i) = yr_rec_est(i,1);
-    endyr_rec_est(i) = yr_rec_est(i,nrecs_est_shift(i));
+    for (j=1;j<=nreg(i);j++)
+    {
+      styr_rec_est(i,j) = yr_rec_est(cum_regs(i)+j,1);
+      endyr_rec_est(i,j) = yr_rec_est(cum_regs(i)+j,nrecs_est_shift(cum_regs(i)+j));
+    }
   }
  END_CALCS
   !! log_input(styr_rec_est);
   !! log_input(endyr_rec_est);
   !! log_input(yr_rec_est);
   int nrecs_est;
-  init_ivector sr_shift(1,nreg-1)
-  ivector yy_shift_st(1,nreg)
-  ivector yy_shift_end(1,nreg)
+  init_imatrix reg_shift(1,nstk,1,nreg-1)
+  imatrix yy_shift_st(1,nstk,1,nreg)
+  imatrix yy_shift_end(1,nstk,1,nreg)
  LOCAL_CALCS
-  yy_shift_st(1) = styr_rec;
-  yy_shift_end(nreg) = endyr;
-  for (i=2;i<=nreg;i++)
+  for (i=1;i<=nstk;i++)
   {
-    yy_shift_st(i) = sr_shift(i-1);
-    yy_shift_end(i-1) = sr_shift(i-1)-1;
+    yy_shift_st(i,1) = styr_rec;
+    yy_shift_end(i,nreg(i)) = endyr;
+    for (j=2;j<=nreg(i);j++)
+    {
+      yy_shift_st(i,j) = reg_shift(i,j-1);
+      yy_shift_end(i,j-1) = reg_shift(i,j-1)-1;
+    }
   }
  END_CALCS
 
 //-----GROWTH PARAMETERS--------------------------------------------------
-  init_number Linfprior
-  init_number cvLinfprior
-  init_int    phase_Linf
-  number log_Linfprior
+  init_matrix  Linfprior(1,nstk,1,nreg)
+  init_matrix  cvLinfprior(1,nstk,1,nreg)
+  init_imatrix phase_Linf(1,nstk,1,nreg)
+  matrix log_Linfprior(1,nstk,1,nreg)
   !! log_Linfprior = log(Linfprior);
   !! log_input(Linfprior)
   !! log_input(cvLinfprior)
 
-  init_number kprior
-  init_number cvkprior
-  init_int    phase_k
-  number log_kprior
+  init_matrix  kprior(1,nstk,1,nreg)
+  init_matrix  cvkprior(1,nstk,1,nreg)
+  init_imatrix phase_k(1,nstk,1,nreg)
+  matrix log_kprior(1,nstk,1,nreg)
   !! log_kprior = log(kprior);
   !! log_input(kprior)
   !! log_input(cvkprior)
 
-  init_number Loprior
-  init_number cvLoprior
-  init_int    phase_Lo
-  number log_Loprior
+  init_matrix  Loprior(1,nstk,1,nreg)
+  init_matrix  cvLoprior(1,nstk,1,nreg)
+  init_imatrix phase_Lo(1,nstk,1,nreg)
+  matrix log_Loprior(1,nstk,1,nreg)
   !! log_Loprior = log(Loprior);
   !! log_input(Loprior)
   !! log_input(cvLoprior)
 
-  init_number sdageprior
-  init_number cvsdageprior
-  init_int    phase_sdage
-  number log_sdageprior
+  init_matrix  sdageprior(1,nstk,1,nreg)
+  init_matrix  cvsdageprior(1,nstk,1,nreg)
+  init_imatrix phase_sdage(1,nstk,1,nreg)
+  matrix log_sdageprior(1,nstk,1,nreg)
   !! log_sdageprior = log(sdageprior);
   !! log_input(sdageprior)
   !! log_input(cvsdageprior)
 
 //---------------------------------------------------------------------------
   // Basic M
-  init_number natmortprior
-  init_number cvnatmortprior
-  init_int    phase_M
+  init_matrix  natmortprior(1,nstk,1,nreg)
+  init_matrix  cvnatmortprior(1,nstk,1,nreg)
+  init_imatrix phase_M(1,nstk,1,nreg)
   !! log_input(natmortprior);
   !! log_input(cvnatmortprior);
   !! log_input(phase_M);
 
   // age-specific M
-  init_int     npars_Mage
-  init_ivector ages_M_changes(1,npars_Mage)
-  init_vector  Mage_in(1,npars_Mage)
-  init_int     phase_Mage
-  vector       Mage_offset_in(1,npars_Mage)
+  init_ivector npars_Mage(1,nregs)
+  init_imatrix ages_M_changes(1,nregs,1,npars_Mage)
+  init_matrix  Mage_in(1,nregs,1,npars_Mage)
+  init_ivector phase_Mage(1,nregs)
+  matrix       Mage_offset_in(1,nregs,1,npars_Mage)
   // convert inputs to offsets from prior for initialization purposes
-  !! if (npars_Mage>0) Mage_offset_in = log(Mage_in / natmortprior);
+ LOCAL_CALCS
+  for (i=1;i<=nregs;i++)
+  {
+    if (npars_Mage(i)>0)
+      Mage_offset_in(i) = log(Mage_in(i) / natmortprior);
+    else
+      Mage_offset_in(i) = 0;
+  }
+ END_CALCS
+  //!! if (npars_Mage>0) Mage_offset_in = log(Mage_in / natmortprior);
   !! log_input(npars_Mage);
   !! log_input(ages_M_changes);
   !! log_input(Mage_in);
   !! log_input(Mage_offset_in);
 
   // time-varying M
-  init_int    phase_rw_M
-  init_int npars_rw_M
-  init_ivector  yrs_rw_M(1,npars_rw_M);
-  init_vector sigma_rw_M(1,npars_rw_M)
+  init_ivector phase_rw_M(1,nstk)
+  init_ivector npars_rw_M(1,nstk)
+  init_imatrix yrs_rw_M(1,nstk,1,npars_rw_M)
+  init_matrix  sigma_rw_M(1,nstk,1,npars_rw_M)
  LOCAL_CALCS
   log_input(phase_rw_M);
   log_input(npars_rw_M);
@@ -503,20 +528,23 @@ DATA_SECTION
 
   int styr_fut
   int endyr_fut            // LAst year for projections
-  init_ivector phase_Rzero(1,nreg)
+  init_imatrix phase_Rzero(1,nstk,1,nreg)
   int phase_nosr
   number Steepness_UB
   // !! phase_Rzero =  4;
   !! phase_nosr  = -3;
   
-  vector yy_sr(styr_sp,endyr+nproj_yrs);
+  matrix yy_sr(1,nstk,styr_sp,endyr+nproj_yrs);
  LOCAL_CALCS
   yy_sr = 1;
-  for (i=2;i<=nreg;i++)
+  for (i=1;i<=nstk;i++)
   {
-    for (j=sr_shift(i-1);j<=endyr+nproj_yrs;j++)
+    for (j=2;j<=nreg(i);j++)
     {
-      yy_sr(j) = i;
+      for (k=reg_shift(i,j-1);k<=endyr+nproj_yrs;k++)
+      {
+        yy_sr(i,k) = j;
+      }
     }
   }
  END_CALCS
@@ -1989,7 +2017,7 @@ FUNCTION Get_Numbers_at_Age
   
   for (i=2; i<=nreg; i++)
   {
-    Bzero(i) = Sp_Biom(sr_shift(i-1)-rec_age) ;  //sr_shift(i-1)-rec_age //(sr_shift(i-1)-nages)+1
+    Bzero(i) = Sp_Biom(reg_shift(i-1)-rec_age) ;  //reg_shift(i-1)-rec_age //(reg_shift(i-1)-nages)+1
   }
 
   for (i=1; i<=nreg; i++)
