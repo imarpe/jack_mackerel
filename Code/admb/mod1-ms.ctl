@@ -40,24 +40,53 @@ Model_1-ms
 
 2000
 #Linf
-74.4	0.1	-4																																									
+74.4
+80.4 80.4
+0.1
+0.1 0.1
+-4
+-4 -4
 #K
-0.16	0.1	-4																																									
+0.16
+0.16 0.16
+0.1
+0.1 0.1
+-4
+-4 -4
 #Lo_Len
-18	0.1	-4																																									
+18
+18 18
+0.1
+0.1 0.1
+-4
+-4 -4
 #Sigma_len
-0.09	0.1	-4																																									
+0.09
+0.09 0.09
+0.1
+0.1 0.1
+-4
+-4 -4
 #Natural_Mortality 
-0.23 0.05 -4   
+0.23
+0.33 0.33
+0.05
+0.05 0.05
+-4
+-4 -4
 # NEW npars_mage
-0
+0 0 0
+# NEW ages_M_changes
+
 # NEW Mage_in
 
 # phase_Mage
--5
+-5 -5 -5
 #Phase_Random_walk_M 
 -4
+-4
 #Nyrs_Random_walk_M 
+0
 0
 #Random_walk_M_yrs blank if nyrs==0
 
