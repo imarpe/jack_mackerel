@@ -354,6 +354,7 @@ DATA_SECTION
   int nregs
   !! nregs = sum(nreg);
   vector cum_regs(1,nstk)
+  !! cum_regs.initialize();
  LOCAL_CALCS
   cum_regs(1) = 0
   for (i=2;i<=nstk;i++)
@@ -461,13 +462,12 @@ DATA_SECTION
   init_ivector phase_Mage(1,nregs)
   matrix       Mage_offset_in(1,nregs,1,npars_Mage)
   // convert inputs to offsets from prior for initialization purposes
+  !! Mage_offset_in.initialize();
  LOCAL_CALCS
   for (i=1;i<=nregs;i++)
   {
     if (npars_Mage(i)>0)
-      Mage_offset_in(i) = log(Mage_in(i) / natmortprior);
-    else
-      Mage_offset_in(i) = 0;
+      Mage_offset_in(i) = log(Mage_in(i) / natmortprior(,)); //OJO!!!
   }
  END_CALCS
   //!! if (npars_Mage>0) Mage_offset_in = log(Mage_in / natmortprior);
@@ -696,6 +696,7 @@ DATA_SECTION
         log_selcoffs_fsh_in.initialize();
         for (int j=1;j<=nages;j++) 
           *(ad_comm::global_datafile) >> sel_fsh_tmp(j);  
+        log_selcoffs_fsh_in(k,1)(1,nselages_in_fsh(k)) = log((sel_fsh_tmp(1,nselages_in_fsh(k))+1e-7)/mean(sel_fsh_tmp(1,nselages_in_fsh(k))+1e-7) );
         for (int jj=2;jj<=n_sel_ch_fsh(k);jj++) 
         {
           // Set the selectivity for the oldest group
@@ -801,7 +802,7 @@ DATA_SECTION
         for (j=1;j<=nages;j++) 
           *(ad_comm::global_datafile) >> sel_ind_tmp(j);  
         log_input(sel_ind_tmp);
-        log_selcoffs_ind_in(k,1)(1,nselages_in_ind(k)) = log((sel_ind_tmp(1,nselages_in_ind(k))+1e-7)/mean(sel_fsh_tmp(1,nselages_in_ind(k))+1e-7) );
+        log_selcoffs_ind_in(k,1)(1,nselages_in_ind(k)) = log((sel_ind_tmp(1,nselages_in_ind(k))+1e-7)/mean(sel_ind_tmp(1,nselages_in_ind(k))+1e-7) );
         // set all change selectivity to initial values
         for (int jj=2;jj<=n_sel_ch_ind(k);jj++) 
         {
@@ -810,7 +811,7 @@ DATA_SECTION
             sel_ind_tmp(j)  = sel_ind_tmp(nselages_in_ind(k));  
           }
           // Set tmp to actual initial vectors...
-          log_selcoffs_ind_in(k,jj)(1,nselages_in_ind(k)) = log((sel_ind_tmp(1,nselages_in_ind(k))+1e-7)/mean(sel_fsh_tmp(1,nselages_in_ind(k))+1e-7) );
+          log_selcoffs_ind_in(k,jj)(1,nselages_in_ind(k)) = log((sel_ind_tmp(1,nselages_in_ind(k))+1e-7)/mean(sel_ind_tmp(1,nselages_in_ind(k))+1e-7) );
           write_input_log<<"Sel_in_ind "<< mfexp(log_selcoffs_ind_in(k,jj))<<endl;
         }
         phase_selcoff_ind(k) = phase_sel_ind(k);
@@ -919,43 +920,55 @@ DATA_SECTION
  LOCAL_CALCS
   for (int k=1;k<=nfsh;k++) 
   {
-    if ((endyr-retro)<=yrs_sel_ch_fsh(k,n_sel_ch_fsh(k))) n_sel_ch_fsh(k)-=retro ;  
+    // if ((endyr-retro)<=yrs_sel_ch_fsh(k,n_sel_ch_fsh(k))) n_sel_ch_fsh(k)-=retro ;  //Ojo not always true
+    for (int i=1;i<=retro;i++)
+    {
+      if (n_sel_ch_fsh(k) >0)
+        if (yrs_sel_ch_fsh(k,n_sel_ch_fsh(k))>=(endyr-retro))
+          n_sel_ch_fsh(k) -= 1;
+    }
     for (int i=1;i<=retro;i++) 
     {
-      cout<<"here"<<max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))<<endl;
-      if (max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))>=(endyr-retro)) 
-      {
-         nyrs_fsh_age(k) -= 1;
-          if (max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))>=(endyr-retro)) 
-             nyrs_fsh_age(k) -= 1;
-      }
-    }
-    if (nyrs_fsh_length(k) >0)
-    {
-      for (int i=1;i<=retro;i++) 
-      {
-       //  cout<<"Here "<<max(yrs_fsh_length_in(k)(1,nyrs_fsh_length(k)))<<endl;
-        if (nyrs_fsh_length(k) >0)
-          if (max(yrs_fsh_length_in(k)(1,nyrs_fsh_length(k)))>=(endyr-retro)) 
-           nyrs_fsh_length(k) -= 1;
-      }
+      // cout<<"here"<<max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))<<endl;
+      if (nyrs_fsh_age(k) >0)
+        if (max(yrs_fsh_age_in(k)(1,nyrs_fsh_age(k)))>=(endyr-retro)) 
+          nyrs_fsh_age(k) -= 1;
+     //  cout<<"Here "<<max(yrs_fsh_length_in(k)(1,nyrs_fsh_length(k)))<<endl;
+      if (nyrs_fsh_length(k) >0)
+        if (max(yrs_fsh_length_in(k)(1,nyrs_fsh_length(k)))>=(endyr-retro)) 
+          nyrs_fsh_length(k) -= 1;
     }
   }
   // now for indices
   for (int k=1;k<=nind;k++) 
   {
-    if ((endyr-retro)<=yrs_sel_ch_ind(k,n_sel_ch_ind(k))) n_sel_ch_ind(k)-=retro ;  
+    // if ((endyr-retro)<=yrs_sel_ch_ind(k,n_sel_ch_ind(k))) n_sel_ch_ind(k)-=retro ;  //Ojo not always true
+    for (int i=1;i<=retro;i++)
+    {
+      if (n_sel_ch_ind(k) >0)
+        if (yrs_sel_ch_ind(k,n_sel_ch_ind(k))>=(endyr-retro)) 
+          n_sel_ch_ind(k) -= 1;
+    }
     for (int i=1;i<=retro;i++) 
     {
       // index values
-      if (max(yrs_ind_in(k)(1,nyrs_ind(k)))>=(endyr-retro)) 
-        nyrs_ind(k) -= 1;
+      if (nyrs_ind(k) >0)
+        if (max(yrs_ind_in(k)(1,nyrs_ind(k)))>=(endyr-retro)) 
+          nyrs_ind(k) -= 1;
       // Ages (since they can be different than actual index years)
-      if (max(yrs_ind_age_in(k)(1,nyrs_ind_age(k)))>=(endyr-retro)) 
-         nyrs_ind_age(k) -= 1;
+      if (nyrs_ind_age(k) >0)
+        if (max(yrs_ind_age_in(k)(1,nyrs_ind_age(k)))>=(endyr-retro)) 
+          nyrs_ind_age(k) -= 1;
+      // Lengths
+      if (nyrs_ind_length(k) >0)
+        if (max(yrs_ind_length_in(k)(1,nyrs_ind_length(k)))>=(endyr-retro)) 
+          nyrs_ind_length(k) -= 1;
     }
   }
-  endyr_rec_est = endyr_rec_est - retro;
+  for (i=1;i<=nstk;i++)
+  {
+    endyr_rec_est(i,nreg(i)) = endyr_rec_est(i,nreg(i)) - retro;
+  }
   endyr         = endyr - retro;
   styr_fut      = endyr+1;
   endyr_fut     = endyr + nproj_yrs; 
@@ -996,12 +1009,12 @@ DATA_SECTION
   {
     catch_bio(k) = catch_bio_in(k)(styr,endyr);
     catch_bio_sd(k) = catch_bio_sd_in(k)(styr,endyr);
-    if (nyrs_fsh_age(k))
+    if (nyrs_fsh_age(k)>0)
     {
       yrs_fsh_age(k) = yrs_fsh_age_in(k)(1,nyrs_fsh_age(k));
       n_sample_fsh_age(k) = n_sample_fsh_age_in(k)(1,nyrs_fsh_age(k));
     }
-    if (nyrs_fsh_length(k))
+    if (nyrs_fsh_length(k)>0)
     {
       yrs_fsh_length(k) = yrs_fsh_length_in(k)(1,nyrs_fsh_length(k));
       n_sample_fsh_length(k) = n_sample_fsh_length_in(k)(1,nyrs_fsh_length(k));
@@ -1075,8 +1088,10 @@ DATA_SECTION
     log_sigmarprior = log(sigmarprior);
     log_input(steepnessprior);
     log_input(sigmarprior);
-    //nrecs_est = endyr_rec_est-styr_rec_est+1;
-    //nrecs_est = endyr_rec_est-styr_rec_est+1;
+    for (i=1;i<=nstk;i++)
+    {
+      nrecs_est_shift(i,nreg(i)) = endyr_rec_est(i,nreg(i))+styr_rec_est(i,nreg(i))+1;
+    }
     write_input_log<<"#  SSB estimated in styr endyr: " <<styr_sp    <<" "<<endyr_sp      <<" "<<endl;
     write_input_log<<"#  Rec estimated in styr endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
     write_input_log<<"#  SR Curve fit  in styr endyr: " <<styr_rec_est<<" "<<endyr_rec_est<<" "<<endl;
@@ -1090,7 +1105,7 @@ DATA_SECTION
     write_input_log<<"# Number of projection years " <<endl<<nproj_yrs<<" "<<endl;// cin>>junk;
 
  END_CALCS
-  vector R_guess(1,nreg)
+  matrix R_guess(1,nstk,1,nreg)
 
   vector offset_ind(1,nind)
   vector offset_fsh(1,nfsh)
@@ -1152,6 +1167,19 @@ DATA_SECTION
   }
 
   // Compute an initial Rzero value based on exploitation 
+  for (i=1;i<=nstk;i++)
+  {
+    for (j=1;j<=nreg(i);j++)
+    {
+      double btmp=0.;
+      dvector ctmp(1,nreg(i));
+      ctmp.initialize();
+      dvector ntmp(1,nages);
+      ntmp(1) = 1.;
+      for (int a=2;a<=nages;a++)
+        ntmp(a) = ntmp(a-1)*exp(-natmortprior-.05);
+    
+  }
    double btmp=0.;
    //double ctmp=0.;
    dvector ctmp(1,nreg);
