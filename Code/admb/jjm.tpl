@@ -1230,54 +1230,54 @@ DATA_SECTION
 
 PARAMETER_SECTION
  // Biological Parameters
-  init_bounded_number Mest(.02,4.8,phase_M)
-  init_bounded_vector Mage_offset(1,npars_Mage,-3,3,phase_Mage)
-  vector Mage(1,nages)
-  init_bounded_vector  M_rw(1,npars_rw_M,-10,10,phase_rw_M)
-  vector natmort(styr,endyr)
-  matrix  natage(styr,endyr+1,1,nages)
-  matrix N_NoFsh(styr,endyr_fut,1,nages);
-  // vector Sp_Biom(styr_sp,endyr)
-  vector pred_rec(styr_rec,endyr)
-  vector mod_rec(styr_rec,endyr) // As estimated by model
-  matrix  M(styr,endyr,1,nages)
-  matrix  Z(styr,endyr,1,nages)
-  matrix  S(styr,endyr,1,nages)
+  init_bounded_vector Mest(1,nmort,.02,4.8,phase_M)
+  init_bounded_matrix Mage_offset(1,nmort,1,npars_Mage,-3,3,phase_Mage)
+  matrix Mage(1,nmort,1,nages)
+  init_bounded_matrix M_rw(1,nstk,1,npars_rw_M,-10,10,phase_rw_M)
+  matrix natmort(1,nstk,styr,endyr)
+  3darray natage(1,nstk,styr,endyr+1,1,nages)
+  3darray N_NoFsh(1,nstk,styr,endyr_fut,1,nages);
+  // matrix Sp_Biom(1,nstk,styr_sp,endyr)
+  matrix pred_rec(1,nstk,styr_rec,endyr)
+  matrix mod_rec(1,nstk,styr_rec,endyr) // As estimated by model
+  3darray  M(1,nstk,styr,endyr,1,nages)
+  3darray  Z(1,nstk,styr,endyr,1,nages)
+  3darray  S(1,nstk,styr,endyr,1,nages)
 
 
  //-----GROWTH PARAMETERS--------------------------------------------------
-  init_number log_Linf(phase_Linf);
-  init_number log_k(phase_k);
-  init_number log_Lo(phase_Lo);
-  init_number log_sdage(phase_sdage);
+  init_vector log_Linf(1,ngrowth,phase_Linf);
+  init_vector log_k(1,ngrowth,phase_k);
+  init_vector log_Lo(1,ngrowth,phase_Lo);
+  init_vector log_sdage(1,ngrowth,phase_sdage);
 //---------------------------------------------------------------------------
 
 
  // Stock rectuitment params
-  init_number_vector mean_log_rec(1,nreg,1); 
-  init_bounded_number_vector steepness(1,nreg,0.21,Steepness_UB,phase_srec)
-  init_number_vector log_Rzero(1,nreg,phase_Rzero)  
+  init_number_vector mean_log_rec(1,nregs,1); 
+  init_bounded_number_vector steepness(1,nrec,0.21,Steepness_UB,phase_srec)
+  init_number_vector log_Rzero(1,nregs,phase_Rzero)  
   // OjO
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
-  init_bounded_vector rec_dev(styr_rec,endyr,-15,15,2)
-  // init_vector rec_dev(styr_rec,endyr,2)
-  init_number_vector log_sigmar(1,nreg,phase_sigmar);
-  vector m_sigmarsq(1,nreg)  
-  vector m_sigmar(1,nreg)
-  vector sigmarsq(1,nreg)  
-  vector sigmar(1,nreg)
-  vector alpha(1,nreg)   
-  vector beta(1,nreg)   
-  vector Bzero(1,nreg)   
-  vector Rzero(1,nreg)   
-  vector phizero(1,nreg)
-  number avg_rec_dev   
+  init_bounded_matrix rec_dev(1,nstk,styr_rec,endyr,-15,15,2)
+  // init_matrix rec_dev(1,nstk,styr_rec,endyr,2)
+  init_number_vector log_sigmar(1,nregs,phase_sigmar);
+  vector m_sigmarsq(1,nregs)
+  vector m_sigmar(1,nregs)
+  vector sigmarsq(1,nregs)
+  vector sigmar(1,nregs)
+  vector alpha(1,nregs)
+  vector beta(1,nregs)
+  vector Bzero(1,nregs)
+  vector Rzero(1,nregs)
+  vector phizero(1,nregs)
+  vector avg_rec_dev(1,nregs)
 
  // Fishing mortality parameters
   // init_vector         log_avg_fmort(1,nfsh,phase_fmort)
   // init_bounded_matrix fmort_dev(1,nfsh,styr,endyr,-15,15.,phase_fmort)
   init_bounded_matrix fmort(1,nfsh,styr,endyr,0.00,5.,phase_fmort)
-  vector Fmort(styr,endyr);  // Annual total Fmort
+  matrix Fmort(1,nstk,styr,endyr);  // Annual total Fmort
   number hrate
   number catch_tmp
   number Fnew 
@@ -1310,7 +1310,7 @@ PARAMETER_SECTION
   3darray sel_fsh(1,nfsh,styr,endyr,1,nages)
   matrix avgsel_fsh(1,nfsh,1,n_sel_ch_fsh);
 
-  matrix  Ftot(styr,endyr,1,nages)
+  3darray Ftot(1,nstk,styr,endyr,1,nages)
   3darray F(1,nfsh,styr,endyr,1,nages)
   3darray eac_fsh(1,nfsh,1,nyrs_fsh_age,1,nages)
 //-----------------------------------------------NEW--------
@@ -1319,7 +1319,7 @@ PARAMETER_SECTION
 //----------------------------------------------------------
   matrix  pred_catch(1,nfsh,styr,endyr)
   3darray catage(1,nfsh,styr,endyr,1,nages)
-  matrix catage_tot(styr,endyr,1,nages)
+  3darray catage_tot(1,nstk,styr,endyr,1,nages)
   matrix expl_biom(1,nfsh,styr,endyr)
 
  // Parameters for computing SPR rates 
@@ -1328,7 +1328,7 @@ PARAMETER_SECTION
   vector F35(1,nfsh)
 
  // Stuff for SPR and yield projections
-  number sigmar_fut
+  vector sigmar_fut(1,nstk)
   vector f_tmp(1,nfsh)
   number SB0
   number SBF50
