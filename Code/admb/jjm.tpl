@@ -380,17 +380,22 @@ DATA_SECTION
   !! log_input(use_age_err);
   init_int retro            // Retro years to peel off (0 means full dataset)
   !! log_input(retro);
-  init_matrix steepnessprior(1,nstk,1,nreg)
-  init_matrix cvsteepnessprior(1,nstk,1,nreg)
-  init_imatrix    phase_srec(1,nstk,1,nreg)
+  init_imatrix rec_map(1,nstk,1,nreg)
+ LOCAL_CALCS
+  nrec = max(rec_map);
+ END_CALCS
+  init_vector steepnessprior(1,nrec)
+  init_vector cvsteepnessprior(1,nrec)
+  init_ivector    phase_srec(1,nrec)
 
-  init_matrix sigmarprior(1,nstk,1,nreg)
-  matrix log_sigmarprior(1,nstk,1,nreg)
-  init_matrix cvsigmarprior(1,nstk,1,nreg)
-  init_imatrix    phase_sigmar(1,nstk,1,nreg)
+  init_vector sigmarprior(1,nrec)
+  vector log_sigmarprior(1,nrec)
+  init_vector cvsigmarprior(1,nrec)
+  init_ivector    phase_sigmar(1,nrec)
   !! log_input(sigmarprior);
   !! log_input(cvsigmarprior);
   !! log_input(phase_sigmar);
+  init_ivector phase_Rzero(1,nregs)
   init_ivector nrecs_est_shift(1,nregs)
   init_imatrix yr_rec_est(1,nregs,1,nrecs_est_shift)
   imatrix styr_rec_est(1,nstk,1,nreg)
@@ -408,7 +413,6 @@ DATA_SECTION
   !! log_input(styr_rec_est);
   !! log_input(endyr_rec_est);
   !! log_input(yr_rec_est);
-  int nrecs_est;
   init_imatrix reg_shift(1,nstk,1,nreg-1)
   imatrix yy_shift_st(1,nstk,1,nreg)
   imatrix yy_shift_end(1,nstk,1,nreg)
@@ -426,63 +430,70 @@ DATA_SECTION
  END_CALCS
 
 //-----GROWTH PARAMETERS--------------------------------------------------
-  init_matrix  Linfprior(1,nstk,1,nreg)
-  init_matrix  cvLinfprior(1,nstk,1,nreg)
-  init_imatrix phase_Linf(1,nstk,1,nreg)
-  matrix log_Linfprior(1,nstk,1,nreg)
+  init_imatrix growth_map(1,nstk,1,nreg)
+ LOCAL_CALCS
+  ngrowth = max(growth_map);
+ END_CALCS
+  init_vector  Linfprior(1,ngrowth)
+  init_vector  cvLinfprior(1,ngrowth)
+  init_ivector phase_Linf(1,ngrowth)
+  vector log_Linfprior(1,ngrowth)
   !! log_Linfprior = log(Linfprior);
   !! log_input(Linfprior)
   !! log_input(cvLinfprior)
 
-  init_matrix  kprior(1,nstk,1,nreg)
-  init_matrix  cvkprior(1,nstk,1,nreg)
-  init_imatrix phase_k(1,nstk,1,nreg)
-  matrix log_kprior(1,nstk,1,nreg)
+  init_vector  kprior(1,ngrowth)
+  init_vector  cvkprior(1,ngrowth)
+  init_ivector phase_k(1,ngrowth)
+  vector log_kprior(1,ngrowth)
   !! log_kprior = log(kprior);
   !! log_input(kprior)
   !! log_input(cvkprior)
 
-  init_matrix  Loprior(1,nstk,1,nreg)
-  init_matrix  cvLoprior(1,nstk,1,nreg)
-  init_imatrix phase_Lo(1,nstk,1,nreg)
-  matrix log_Loprior(1,nstk,1,nreg)
+  init_vector  Loprior(1,ngrowth)
+  init_vector  cvLoprior(1,ngrowth)
+  init_ivector phase_Lo(1,ngrowth)
+  vector log_Loprior(1,ngrowth)
   !! log_Loprior = log(Loprior);
   !! log_input(Loprior)
   !! log_input(cvLoprior)
 
-  init_matrix  sdageprior(1,nstk,1,nreg)
-  init_matrix  cvsdageprior(1,nstk,1,nreg)
-  init_imatrix phase_sdage(1,nstk,1,nreg)
-  matrix log_sdageprior(1,nstk,1,nreg)
+  init_vector  sdageprior(1,ngrowth)
+  init_vector  cvsdageprior(1,ngrowth)
+  init_ivector phase_sdage(1,ngrowth)
+  vector log_sdageprior(1,ngrowth)
   !! log_sdageprior = log(sdageprior);
   !! log_input(sdageprior)
   !! log_input(cvsdageprior)
 
 //---------------------------------------------------------------------------
+  init_imatrix mort_map(1,nstk,1,nreg)
+ LOCAL_CALCS
+  nmort = max(mort_map);
+ END_CALCS
   // Basic M
-  init_matrix  natmortprior(1,nstk,1,nreg)
-  init_matrix  cvnatmortprior(1,nstk,1,nreg)
-  init_imatrix phase_M(1,nstk,1,nreg)
+  init_vector  natmortprior(1,nmort)
+  init_vector  cvnatmortprior(1,nmort)
+  init_ivector phase_M(1,nmort)
   !! log_input(natmortprior);
   !! log_input(cvnatmortprior);
   !! log_input(phase_M);
 
   // age-specific M
-  init_ivector npars_Mage(1,nregs)
-  init_imatrix ages_M_changes(1,nregs,1,npars_Mage)
-  init_matrix  Mage_in(1,nregs,1,npars_Mage)
-  init_ivector phase_Mage(1,nregs)
-  matrix       Mage_offset_in(1,nregs,1,npars_Mage)
+  init_ivector npars_Mage(1,nmort)
+  init_imatrix ages_M_changes(1,nmort,1,npars_Mage)
+  init_matrix  Mage_in(1,nmort,1,npars_Mage)
+  init_ivector phase_Mage(1,nmort)
+  matrix       Mage_offset_in(1,nmort,1,npars_Mage)
   // convert inputs to offsets from prior for initialization purposes
   !! Mage_offset_in.initialize();
  LOCAL_CALCS
-  for (i=1;i<=nregs;i++)
+  for (r=1;r<=nmort;r++)
   {
-    if (npars_Mage(i)>0)
-      Mage_offset_in(i) = log(Mage_in(i) / natmortprior(stk_reg_map(1,i),stk_reg_map(2,i)));
+    if (npars_Mage(r)>0)
+      Mage_offset_in(r) = log(Mage_in(r) / natmortprior(r));
   }
  END_CALCS
-  //!! if (npars_Mage>0) Mage_offset_in = log(Mage_in / natmortprior);
   !! log_input(npars_Mage);
   !! log_input(ages_M_changes);
   !! log_input(Mage_in);
@@ -540,7 +551,6 @@ DATA_SECTION
 
   int styr_fut
   int endyr_fut            // LAst year for projections
-  init_imatrix phase_Rzero(1,nstk,1,nreg)
   int phase_nosr
   number Steepness_UB
   // !! phase_Rzero =  4;
@@ -1117,7 +1127,7 @@ DATA_SECTION
     write_input_log<<"# Number of projection years " <<endl<<nproj_yrs<<" "<<endl;// cin>>junk;
 
  END_CALCS
-  matrix R_guess(1,nstk,1,nreg)
+  vector R_guess(1,nregs)
 
   vector offset_ind(1,nind)
   vector offset_fsh(1,nfsh)
@@ -1188,7 +1198,7 @@ DATA_SECTION
       dvector ntmp(1,nages);
       ntmp(1) = 1.;
       for (int a=2;a<=nages;a++)
-        ntmp(a) = ntmp(a-1)*exp(-natmortprior(s,r)-.05);
+        ntmp(a) = ntmp(a-1)*exp(-natmortprior(mort_map(s,r))-.05);
       btmp = wt_pop * ntmp;
       write_input_log << "Mean Catch "<< "stock "<< s << "regime "<< r <<endl;
       int yy_shift_st_tmp;
@@ -1209,7 +1219,7 @@ DATA_SECTION
       }
       ctmp /= (jj * (yy_shift_end_tmp - yy_shift_st_tmp + 1));
       write_input_log << ctmp <<endl;
-      R_guess(s,r) = log((ctmp/.02 )/btmp) ;
+      R_guess(cum_regs(s)+r) = log((ctmp/.02 )/btmp) ;
     }
   }
   write_input_log << "R_guess "<<endl;
