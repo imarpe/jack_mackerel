@@ -325,6 +325,7 @@ DATA_SECTION
   !! log_input(age_err);
 
   int s // Index for stock
+  int r // Index for regime
   int k // Index for fishery or index
   int i // Index for year
   int j // Index for age
@@ -355,11 +356,22 @@ DATA_SECTION
   !! nregs = sum(nreg);
   vector cum_regs(1,nstk)
   !! cum_regs.initialize();
+  matrix stk_reg_map(2,nregs)
  LOCAL_CALCS
-  cum_regs(1) = 0
-  for (i=2;i<=nstk;i++)
+  //cum_regs(1) = 0;
+  for (s=2;s<=nstk;s++)
   {
-    cum_regs(i) = sum(nreg(1,i-1));
+    cum_regs(s) = sum(nreg(1,s-1));
+  }
+  int jj=1;
+  for (s=1;s<=nstk;s++)
+  {
+    for (r=1;r<=nreg(s);r++)
+    {
+      stk_reg_map(1,jj) = s;
+      stk_reg_map(2,jj) = r;
+      jj++;
+    }
   }
  END_CALCS
   init_int    SrType        // 2 Bholt, 1 Ricker
@@ -384,12 +396,12 @@ DATA_SECTION
   imatrix styr_rec_est(1,nstk,1,nreg)
   imatrix endyr_rec_est(1,nstk,1,nreg)
  LOCAL_CALCS
-  for (i=1;i<=nstk;i++)
+  for (s=1;s<=nstk;s++)
   {
-    for (j=1;j<=nreg(i);j++)
+    for (r=1;r<=nreg(s);r++)
     {
-      styr_rec_est(i,j) = yr_rec_est(cum_regs(i)+j,1);
-      endyr_rec_est(i,j) = yr_rec_est(cum_regs(i)+j,nrecs_est_shift(cum_regs(i)+j));
+      styr_rec_est(s,r) = yr_rec_est(cum_regs(s)+r,1);
+      endyr_rec_est(s,r) = yr_rec_est(cum_regs(s)+r,nrecs_est_shift(cum_regs(s)+r));
     }
   }
  END_CALCS
@@ -401,14 +413,14 @@ DATA_SECTION
   imatrix yy_shift_st(1,nstk,1,nreg)
   imatrix yy_shift_end(1,nstk,1,nreg)
  LOCAL_CALCS
-  for (i=1;i<=nstk;i++)
+  for (s=1;s<=nstk;s++)
   {
-    yy_shift_st(i,1) = styr_rec;
-    yy_shift_end(i,nreg(i)) = endyr;
-    for (j=2;j<=nreg(i);j++)
+    yy_shift_st(s,1) = styr_rec;
+    yy_shift_end(s,nreg(s)) = endyr;
+    for (r=2;r<=nreg(s);r++)
     {
-      yy_shift_st(i,j) = reg_shift(i,j-1);
-      yy_shift_end(i,j-1) = reg_shift(i,j-1)-1;
+      yy_shift_st(s,r) = reg_shift(s,r-1);
+      yy_shift_end(s,r-1) = reg_shift(s,r-1)-1;
     }
   }
  END_CALCS
@@ -467,7 +479,7 @@ DATA_SECTION
   for (i=1;i<=nregs;i++)
   {
     if (npars_Mage(i)>0)
-      Mage_offset_in(i) = log(Mage_in(i) / natmortprior(,)); //OJO!!!
+      Mage_offset_in(i) = log(Mage_in(i) / natmortprior(stk_reg_map(1,i),stk_reg_map(2,i)));
   }
  END_CALCS
   //!! if (npars_Mage>0) Mage_offset_in = log(Mage_in / natmortprior);
@@ -537,13 +549,13 @@ DATA_SECTION
   matrix yy_sr(1,nstk,styr_sp,endyr+nproj_yrs);
  LOCAL_CALCS
   yy_sr = 1;
-  for (i=1;i<=nstk;i++)
+  for (s=1;s<=nstk;s++)
   {
-    for (j=2;j<=nreg(i);j++)
+    for (r=2;r<=nreg(s);r++)
     {
-      for (k=reg_shift(i,j-1);k<=endyr+nproj_yrs;k++)
+      for (i=reg_shift(s,r-1);i<=endyr+nproj_yrs;i++)
       {
-        yy_sr(i,k) = j;
+        yy_sr(s,i) = r;
       }
     }
   }
@@ -965,9 +977,9 @@ DATA_SECTION
           nyrs_ind_length(k) -= 1;
     }
   }
-  for (i=1;i<=nstk;i++)
+  for (s=1;s<=nstk;s++)
   {
-    endyr_rec_est(i,nreg(i)) = endyr_rec_est(i,nreg(i)) - retro;
+    endyr_rec_est(s,nreg(s)) = endyr_rec_est(s,nreg(s)) - retro;
   }
   endyr         = endyr - retro;
   styr_fut      = endyr+1;
@@ -1088,9 +1100,9 @@ DATA_SECTION
     log_sigmarprior = log(sigmarprior);
     log_input(steepnessprior);
     log_input(sigmarprior);
-    for (i=1;i<=nstk;i++)
+    for (s=1;s<=nstk;s++)
     {
-      nrecs_est_shift(i,nreg(i)) = endyr_rec_est(i,nreg(i))+styr_rec_est(i,nreg(i))+1;
+      nrecs_est_shift(s,nreg(s)) = endyr_rec_est(s,nreg(s))+styr_rec_est(s,nreg(s))+1;
     }
     write_input_log<<"#  SSB estimated in styr endyr: " <<styr_sp    <<" "<<endyr_sp      <<" "<<endl;
     write_input_log<<"#  Rec estimated in styr endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
@@ -1167,48 +1179,41 @@ DATA_SECTION
   }
 
   // Compute an initial Rzero value based on exploitation 
-  for (i=1;i<=nstk;i++)
+  for (s=1;s<=nstk;s++)
   {
-    for (j=1;j<=nreg(i);j++)
+    for (r=1;r<=nreg(s);r++)
     {
       double btmp=0.;
-      dvector ctmp(1,nreg(i));
-      ctmp.initialize();
+      double ctmp=0.;
       dvector ntmp(1,nages);
       ntmp(1) = 1.;
       for (int a=2;a<=nages;a++)
-        ntmp(a) = ntmp(a-1)*exp(-natmortprior-.05);
-    
+        ntmp(a) = ntmp(a-1)*exp(-natmortprior(s,r)-.05);
+      btmp = wt_pop * ntmp;
+      write_input_log << "Mean Catch "<< "stock "<< s << "regime "<< r <<endl;
+      int yy_shift_st_tmp;
+      int yy_shift_end_tmp;
+      if (r > 1)
+        yy_shift_st_tmp = yy_shift_st(s,r);
+      else
+        yy_shift_st_tmp = styr;
+      yy_shift_end_tmp = yy_shift_end(s,r);
+      int jj=0;
+      for (k=1;k<=nfsh;k++)
+      {
+        if (sel_map(1,k) == s)
+        {
+          ctmp += sum(catch_bio(k)(yy_shift_st_tmp,yy_shift_end_tmp));
+          jj++;
+        }
+      }
+      ctmp /= (jj * (yy_shift_end_tmp - yy_shift_st_tmp + 1));
+      write_input_log << ctmp <<endl;
+      R_guess(s,r) = log((ctmp/.02 )/btmp) ;
+    }
   }
-   double btmp=0.;
-   //double ctmp=0.;
-   dvector ctmp(1,nreg);
-   ctmp.initialize();
-   dvector ntmp(1,nages);
-   ntmp(1) = 1.;
-   for (int a=2;a<=nages;a++)
-     ntmp(a) = ntmp(a-1)*exp(-natmortprior-.05);
-   btmp = wt_pop * ntmp;
-   write_input_log << "Mean Catch"<<endl;
-   ivector yy_shift_st_tmp(1,nreg);
-   ivector yy_shift_end_tmp(1,nreg);
-   yy_shift_st_tmp = yy_shift_st;
-   yy_shift_st_tmp(1) = styr;
-   yy_shift_end_tmp = yy_shift_end;
-   for (i=1;i<=nreg;i++)
-   {
-     for (j=1;j<=nfsh;j++)
-     {
-       ctmp(i) += sum(catch_bio(j)(yy_shift_st_tmp(i),yy_shift_end_tmp(i)));
-     }
-     ctmp(i) /= (nfsh * (yy_shift_end_tmp(i) - yy_shift_st_tmp(i) + 1));
-     //ctmp(i) = mean(catch_bio);
-   }
-   //ctmp = mean(catch_bio);
-   write_input_log << ctmp <<endl;
-   R_guess = log((ctmp/.02 )/btmp) ;
-   write_input_log << "R_guess "<<endl;
-   write_input_log << R_guess <<endl;
+  write_input_log << "R_guess "<<endl;
+  write_input_log << R_guess <<endl;
  END_CALCS
  // vector len_bins(1,nlength)
  // !! len_bins.fill_seqadd(stlength,binlength);
