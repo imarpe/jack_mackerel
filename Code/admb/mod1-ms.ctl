@@ -7,7 +7,7 @@ Model_1-ms
 2 2 1 2 2 2 2 2 1 1 2 2 2
 1 1 1 1 2 1 1 2 1 1 1 1 1  
 1 2 3 4 1 1 2 4 3 3 4 4 4  
-#Number of regimes
+#Number of regimes (by stock)
 1 2
 #Sr_type 
 2  
@@ -15,23 +15,19 @@ Model_1-ms
 1  
 #Retro 
 0  
+#Recruitment sharing matrix (number_stocks, number_regimes)
+1
+2 3
 #Steepness 
-0.8
-0.8 0.8
-300
-300 300
--6
--6 -6
+0.8 0.8 0.8
+300 300 300
+-6  -6  -6
 #SigmaR 
-0.6
-0.6 0.6
-15
-15 15
--4
--4 -4
+0.6 0.6 0.6
+15  15  15
+-4  -4  -4
 #Nyrs_sr
-43
-29 12
+43  29  12
 #yrs_sr
 1970	1971	1972	1973	1974	1975	1976	1977	1978	1979	1980	1981	1982	1983	1984	1985	1986	1987	1988	1989	1990	1991	1992	1993	1994	1995	1996	1997	1998	1999	2000	2001	2002	2003	2004	2005	2006	2007	2008	2009	2010	2011	2012
 1970	1971	1972	1973	1974	1975	1976	1977	1978	1979	1980	1981	1982	1983	1984	1985	1986	1987	1988	1989	1990	1991	1992	1993	1994	1995	1996	1997	1998
@@ -39,49 +35,42 @@ Model_1-ms
 #reg_shifts blank if nreg==1
 
 2000
+#phase_Rzero
+4  4  4
+#Growth parameters sharing matrix (number_stocks, number_regimes)
+1
+2 2
 #Linf
-74.4
-80.4 80.4
-0.1
-0.1 0.1
--4
--4 -4
+74.4 80.4
+0.1  0.1
+-4   -4
 #K
-0.16
 0.16 0.16
-0.1
-0.1 0.1
--4
--4 -4
+0.1  0.1
+-4   -4
 #Lo_Len
-18
-18 18
-0.1
+18  18
 0.1 0.1
--4
--4 -4
+-4  -4
 #Sigma_len
-0.09
 0.09 0.09
-0.1
-0.1 0.1
--4
--4 -4
+0.1  0.1
+-4   -4
+#Mortality sharing matrix (number_stocks, number_regimes)
+1
+2 2
 #Natural_Mortality 
-0.23
-0.33 0.33
-0.05
+0.23 0.33
 0.05 0.05
--4
--4 -4
+-4   -4
 # NEW npars_mage
-0 0 0
+0 0
 # NEW ages_M_changes
 
 # NEW Mage_in
 
 # phase_Mage
--5 -5 -5
+-5 -5
 #Phase_Random_walk_M 
 -4
 -4
@@ -120,9 +109,6 @@ Model_1-ms
 0.05  
 #n_proj_yrs                    
 10  
-#phase_Rzero
-4
-4 4
 #---------------------------------------------------------
 # Fishery 1 N Chile  
 1  #selectivity type
