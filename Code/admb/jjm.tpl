@@ -1340,15 +1340,15 @@ PARAMETER_SECTION
 
   matrix Nspr(1,4,1,nages)
  
-  matrix nage_future(styr_fut,endyr_fut,1,nages)
+  3darray nage_future(1,nstk,styr_fut,endyr_fut,1,nages)
 
-  init_vector rec_dev_future(styr_fut,endyr_fut,phase_proj);
-  vector Sp_Biom_future(styr_fut-rec_age,endyr_fut);
+  init_matrix rec_dev_future(1,nstk,styr_fut,endyr_fut,phase_proj);
+  matrix Sp_Biom_future(1,nstk,styr_fut-rec_age,endyr_fut);
   3darray F_future(1,nfsh,styr_fut,endyr_fut,1,nages);
-  matrix Z_future(styr_fut,endyr_fut,1,nages);
-  matrix S_future(styr_fut,endyr_fut,1,nages);
-  matrix catage_future(styr_fut,endyr_fut,1,nages);
-  number avg_rec_dev_future
+  3darray Z_future(1,nstk,styr_fut,endyr_fut,1,nages);
+  3darray S_future(1,nstk,styr_fut,endyr_fut,1,nages);
+  3darray catage_future(1,nstk,styr_fut,endyr_fut,1,nages);
+  vector avg_rec_dev_future(1,nstk)
   vector avg_F_future(1,5)
 
  // Survey Observation parameters
@@ -1395,38 +1395,44 @@ PARAMETER_SECTION
   vector obj_comps(1,14)
   init_number repl_F(5)
 
-  sdreport_number repl_yld
-  sdreport_number repl_SSB
-  sdreport_number B100
-  number F50_est
-  number F40_est
-  number F35_est
+  sdreport_vector repl_yld(1,nstk)
+  sdreport_vector repl_SSB(1,nstk)
+  sdreport_vector B100(1,nstk)
+  vector F50_est(1,nstk)
+  vector F40_est(1,nstk)
+  vector F35_est(1,nstk)
   matrix q_ind(1,nind,1,nyrs_ind)
   vector q_power_ind(1,nind)
   // sdreport_vector q_ind(1,nind)
-  sdreport_vector totbiom(styr,endyr+1)
-  sdreport_vector totbiom_NoFish(styr,endyr)
-  sdreport_vector Sp_Biom(styr_sp,endyr+1)
-  sdreport_vector Sp_Biom_NoFish(styr_sp,endyr_fut)
-  sdreport_vector Sp_Biom_NoFishRatio(styr,endyr)
-  sdreport_number ABCBiom;
-  sdreport_vector recruits(styr,endyr+1)
-  // vector recruits(styr,endyr+1)
-  sdreport_number depletion
-  sdreport_number depletion_dyn
-  sdreport_number MSY;
-  sdreport_number MSYL;
-  sdreport_number Fmsy;
-  sdreport_number lnFmsy;
-  sdreport_number Fcur_Fmsy;
-  sdreport_number Rmsy;
-  sdreport_number Bmsy;
-  sdreport_number Bcur_Bmsy;
+  sdreport_matrix totbiom(1,nstk,styr,endyr+1)
+  sdreport_matrix totbiom_NoFish(1,nstk,styr,endyr)
+  sdreport_matrix Sp_Biom(1,nstk,styr_sp,endyr+1)
+  sdreport_matrix Sp_Biom_NoFish(1,nstk,styr_sp,endyr_fut)
+  sdreport_matrix Sp_Biom_NoFishRatio(1,nstk,styr,endyr)
+  sdreport_vector ABCBiom(1,nstk);
+  sdreport_matrix recruits(1,nstk,styr,endyr+1)
+  // matrix recruits(1,nstk,styr,endyr+1)
+  sdreport_vector depletion(1,nstk)
+  sdreport_vector depletion_dyn(1,nstk)
+  sdreport_vector MSY(1,nstk);
+  sdreport_vector MSYL(1,nstk);
+  sdreport_vector Fmsy(1,nstk);
+  sdreport_vector lnFmsy(1,nstk);
+  sdreport_vector Fcur_Fmsy(1,nstk);
+  sdreport_vector Rmsy(1,nstk);
+  sdreport_vector Bmsy(1,nstk);
+  sdreport_vector Bcur_Bmsy(1,nstk);
   sdreport_vector pred_ind_nextyr(1,nind);
-  sdreport_number OFL;
+  sdreport_vector OFL(1,nstk);
   // NOTE TO DAVE: Need to have a phase switch for sdreport variables(
-  matrix catch_future(1,4,styr_fut,endyr_fut); // Note, don't project for F=0 (it will bomb)
-  sdreport_matrix SSB_fut(1,5,styr_fut,endyr_fut)
+  3darray catch_future(1,4,1,nstk,styr_fut,endyr_fut); // Note, don't project for F=0 (it will bomb)
+  //sdreport_matrix SSB_fut(1,5,styr_fut,endyr_fut) //Ojo
+  3darray SSB_fut(1,5,1,nstk,styr_fut,endyr_fut) //Ojo
+  sdreport_matrix SSB_fut_1(1,nstk,styr_fut,endyr_fut)
+  sdreport_matrix SSB_fut_2(1,nstk,styr_fut,endyr_fut)
+  sdreport_matrix SSB_fut_3(1,nstk,styr_fut,endyr_fut)
+  sdreport_matrix SSB_fut_4(1,nstk,styr_fut,endyr_fut)
+  sdreport_matrix SSB_fut_5(1,nstk,styr_fut,endyr_fut)
   !! write_input_log <<"logRzero "<<log_Rzero<<endl;
   !! write_input_log <<"logmeanrec "<<mean_log_rec<<endl;
   !! write_input_log<< "exp(log_sigmarprior "<<exp(log_sigmarprior)<<endl;
@@ -1435,17 +1441,17 @@ PARAMETER_SECTION
 
 
 //-----GROWTH PARAMETERS--------------------------------------------------
- number Linf;
- number k_coeff;
- number Lo;
- number sdage;
- vector mu_age(1,nages);
- vector sigma_age(1,nages);
+ vector Linf(1,ngrowth);
+ vector k_coeff(1,ngrowth);
+ vector Lo(1,ngrowth);
+ vector sdage(1,ngrowth);
+ matrix mu_age(1,ngrowth,1,nages);
+ matrix sigma_age(1,ngrowth,1,nages);
  matrix P1(1,nages,1,nlength);
  matrix P2(1,nages,1,nlength);
  matrix P3(1,nages,1,nlength);
  vector Ones_length(1,nlength);
- matrix P_age2len(1,nages,1,nlength);
+ 3darray P_age2len(1,ngrowth,1,nages,1,nlength);
 
 //-----------------------------------------------------------------------
  // Initialize coefficients (if needed)
@@ -1538,27 +1544,43 @@ PARAMETER_SECTION
 
 PRELIMINARY_CALCS_SECTION
   // Initialize age-specific changes in M if they are specified
-  M(styr) = Mest;
-  if (npars_Mage>0)
+  for (s=1;s<=nstk;s++)
   {
-    Mage_offset = Mage_offset_in;
-    int jj=1;
-    for (j=1;j<=nages;j++)
+    vector yr_reg_st_tmp(1,nreg(s));
+    yr_reg_st_tmp(1) = styr;
+    for (r=2;r<=nreg(s);r++)
+      yr_reg_st_tmp(r) = yy_shift_st(s,r);
+    //Initialize matrix of M
+    int r=1;
+    for (i=styr;i<=endyr;i++)
     {
-     if (j==ages_M_changes(jj))
+      if (i==yr_reg_st_tmp(r))
       {
-        M(styr,j) = M(styr,1)*mfexp(Mage_offset(jj));
-        jj++;
-        if (npars_Mage < jj) jj=npars_Mage;
+        M(s,i) = Mest(mort_map(s,r));
+        if (npars_Mage(mort_map(s,r))>0)
+        {
+          Mage_offset(mort_map(s,r)) = Mage_offset_in(mort_map(s,r));
+          int jj=1;
+          for (j=1;j<=nages;j++)
+          {
+            if (j==ages_M_changes(mort_map(s,r),jj))
+            {
+              M(s,i,j) = M(s,i,1)*mfexp(Mage_offset(mort_map(s,r),jj));
+              jj++;
+              if (npars_Mage(mort_map(s,r)) < jj) jj=npars_Mage(mort_map(s,r));
+            }
+            else
+              if(j>1)
+                M(s,i,j) = M(s,i,j-1);
+          }
+        }
+        r++;
+        if (nreg(s) < r) r=nreg(s);
       }
       else
-        if(j>1) 
-          M(styr,j) = M(styr,j-1);
+        M(s,i) = M(s,i-1);
     }
   }
-  //Initialize matrix of M
-  for (i=styr+1;i<=endyr;i++)
-    M(i) = M(i-1);
   log_input(M);
   Get_Age2length();
 INITIALIZATION_SECTION
@@ -1698,36 +1720,39 @@ FUNCTION Get_Age2length
   k_coeff = mfexp(log_k);
   Lo      = mfexp(log_Lo);
   sdage   = mfexp(log_sdage);
-  int i, j;
-  mu_age(1)=Lo; // first length (modal)
-  for (i=2;i<=nages;i++)
-    mu_age(i) = Linf*(1.-exp(-k_coeff))+exp(-k_coeff)*mu_age(i-1); // the mean length by age group
-  sigma_age=sdage*mu_age; // standard deviation of length-at-age
-  P_age2len = ALK( mu_age, sigma_age, len_bins);
+  for (r=1;r<=ngrowth;r++)
+  {
+    int i, j;
+    mu_age(r,1)=Lo(r); // first length (modal)
+    for (i=2;i<=nages;i++)
+      mu_age(r,i) = Linf(r)*(1.-exp(-k_coeff(r)))+exp(-k_coeff(r))*mu_age(r,i-1); // the mean length by age group
+    sigma_age(r)=sdage(r)*mu_age(r); // standard deviation of length-at-age
+    P_age2len(r) = ALK( mu_age(r), sigma_age(r), len_bins);
+  }
 FUNCTION dvar_matrix ALK(dvar_vector& mu, dvar_vector& sig, dvector& x)
-	//RETURN_ARRAYS_INCREMENT();
-	int i, j;
-	dvariable z1;
-	dvariable z2;
-	int si,ni; si=mu.indexmin(); ni=mu.indexmax();
-	int sj,nj; sj=x.indexmin(); nj=x.indexmax();
-	dvar_matrix pdf(si,ni,sj,nj);
+  //RETURN_ARRAYS_INCREMENT();
+  int i, j;
+  dvariable z1;
+  dvariable z2;
+  int si,ni; si=mu.indexmin(); ni=mu.indexmax();
+  int sj,nj; sj=x.indexmin(); nj=x.indexmax();
+  dvar_matrix pdf(si,ni,sj,nj);
   double xs;
-	pdf.initialize();
-	for(i=si;i<=ni;i++) //loop over ages
-	{
-		for(j=sj;j<=nj;j++) //loop over length bins
-		{
+  pdf.initialize();
+  for(i=si;i<=ni;i++) //loop over ages
+  {
+    for(j=sj;j<=nj;j++) //loop over length bins
+    {
       if (j<nj)
         xs=0.5*(x[sj+1]-x[sj]);  // accounts for variable bin-widths...?
-			z1=((x(j)-xs)-mu(i))/sig(i);
-			z2=((x(j)+xs)-mu(i))/sig(i);
-			pdf(i,j)=cumd_norm(z2)-cumd_norm(z1);
-		}//end nbins
-		pdf(i)/=sum(pdf(i));
-	}//end nage
-	//RETURN_ARRAYS_DECREMENT();
-	return(pdf);
+      z1=((x(j)-xs)-mu(i))/sig(i);
+      z2=((x(j)+xs)-mu(i))/sig(i);
+      pdf(i,j)=cumd_norm(z2)-cumd_norm(z1);
+    }//end nbins
+    pdf(i)/=sum(pdf(i));
+  }//end nage
+  //RETURN_ARRAYS_DECREMENT();
+  return(pdf);
 //---------------------------------------------------------------------------
 FUNCTION Get_Replacement_Yield
   // compute next year's yield and SSB and add penalty to ensure F gives same SSB... 
