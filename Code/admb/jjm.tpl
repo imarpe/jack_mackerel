@@ -1957,66 +1957,83 @@ FUNCTION Get_Selectivity
 
   // Map selectivities across fisheries and indices as needed.
   for (k=1;k<=nfsh;k++)
-    if (sel_map(2,k)!=k)  // If 2nd row shows a different fishery then use that fishery
-      log_sel_fsh(k) = log_sel_fsh(sel_map(2,k));
+    if (sel_map(3,k)!=k)  // If 3rd row shows a different fishery then use that fishery
+      log_sel_fsh(k) = log_sel_fsh(sel_map(3,k));
 
   for (k=1+nfsh;k<=nfsh_and_ind;k++)
-    if (sel_map(1,k)!=2) 
-      log_sel_ind(k-nfsh) = log_sel_fsh(sel_map(2,k));
-    else if (sel_map(2,k)!=(k-nfsh)) 
-      log_sel_ind(k-nfsh) = log_sel_ind(sel_map(2,k));
+    if (sel_map(2,k)!=2) 
+      log_sel_ind(k-nfsh) = log_sel_fsh(sel_map(3,k));
+    else if (sel_map(3,k)!=(k-nfsh)) 
+      log_sel_ind(k-nfsh) = log_sel_ind(sel_map(3,k));
 
   sel_fsh = mfexp(log_sel_fsh);
   sel_ind = mfexp(log_sel_ind);
 
 FUNCTION Get_NatMortality
-  natmort = Mest;
-  M(styr) = Mest;
-  // Age varying part
-  if (npars_Mage>0 && (active(Mest) || active(Mage_offset)))
+  for (s=1;s<=nstk;s++)
   {
-    int jj=1;
-    for (j=1;j<=nages;j++)
+    vector yr_reg_st_tmp(1,nreg(s));
+    yr_reg_st_tmp(1) = styr;
+    for (r=2;r<=nreg(s);r++)
+      yr_reg_st_tmp(r) = yy_shift_st(s,r);
+    int r=1;
+    for (i=styr;i<=endyr;i++)
     {
-      if (j==ages_M_changes(jj))
+      if (i==yr_reg_st_tmp(r))
       {
-        M(styr,j) = M(styr,1)*mfexp(Mage_offset(jj));
-        jj++;
-        if (npars_Mage < jj) jj=npars_Mage;
+        natmort(s,i) = Mest(mort_map(s,r));
+        M(s,i) = Mest(mort_map(s,r));
+        // Age varying part
+        if (npars_Mage(mort_map(s,r))>0 && (active(Mest) || active(Mage_offset)))
+        {
+          int jj=1;
+          for (j=1;j<=nages;j++)
+          {
+            if (j==ages_M_changes(mort_map(s,r),jj))
+            {
+              M(s,i,j) = M(s,i,1)*mfexp(Mage_offset(mort_map(s,r),jj));
+              jj++;
+              if (npars_Mage(mort_map(s,r)) < jj) jj=npars_Mage(mort_map(s,r));
+            }
+            else
+            {
+              if(j>1)
+                M(s,i,j) = M(s,i,j-1);
+            }
+          }
+        }
+        r++;
+        if (nreg(s) < r) r=nreg(s);
       }
       else
-        if(j>1) 
-          M(styr,j) = M(styr,j-1);
-    }
-  }
-
-  // Time varying part
-  if (npars_rw_M>0 && active(M_rw))
-  {
-    int ii=1;
-    for (i=styr+1;i<=endyr;i++)
-    {
-      if (i==yrs_rw_M(ii))
       {
-        M(i) = M(i-1)*mfexp(M_rw(ii));
-        ii++;
-        if (npars_rw_M < ii) ii=npars_rw_M;
+        natmort(s,i) = Mest(mort_map(s,r-1));
+        // Time varying part
+        if (npars_rw_M(s)>0 && active(M_rw))
+        {
+          int ii=1;
+          if (i==yrs_rw_M(s,ii))
+          {
+            M(s,i) = M(s,i-1)*mfexp(M_rw(s,ii));
+            ii++;
+            if (npars_rw_M(s) < ii) ii=npars_rw_M(s);
+          }
+          else
+            M(s,i) = M(s,i-1);
+        }
+        else
+          M(s,i) = M(s,i-1);
       }
-      else
-        M(i) = M(i-1);
     }
   }
-  else
-    for (i=styr+1;i<=endyr;i++)
-      M(i) = M(i-1);
 
 FUNCTION Get_Mortality2
   Get_NatMortality();
   Z       = M;
   for (k=1;k<=nfsh;k++)
   {
-    F(k)   = elem_div(catage(k),natage);
-    Z     += F(k);
+    F(k)   = elem_div(catage(k),natage(sel_map(1,k)));
+    Z(sel_map(1,k))     += F(k);
   }
   S = mfexp(-1.*Z);
 
@@ -2028,11 +2045,11 @@ FUNCTION Get_Mortality
     Fmort.initialize();
     for (k=1;k<=nfsh;k++)
     {
-      Fmort +=  fmort(k);
+      Fmort(sel_map(1,k)) +=  fmort(k);
       for (i=styr;i<=endyr;i++)
       {
         F(k,i)   =  fmort(k,i) * sel_fsh(k,i) ;
-        Z(i)    += F(k,i);
+        Z(sel_map(1,k),i)    += F(k,i);
       }
     }
     S  = mfexp(-1.*Z);
