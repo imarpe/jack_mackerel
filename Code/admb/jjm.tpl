@@ -2144,6 +2144,7 @@ FUNCTION Get_Survey_Predictions
   int iyr;
   for (k=1;k<=nind;k++)
   {
+    int istk = sel_map(1,k+nfsh);
     // Set rest of q's in time series equal to the random walk for current (avoids tricky tails...)
     for (i=2;i<=(1+npars_rw_q(k));i++)
     {
@@ -2156,13 +2157,13 @@ FUNCTION Get_Survey_Predictions
     for (i=1;i<=nyrs_ind(k);i++)
     {        
       iyr=yrs_ind(k,i);
-      pred_ind(k,i) = q_ind(k,i) * pow(elem_prod(natage(iyr),pow(S(iyr),ind_month_frac(k))) * 
+      pred_ind(k,i) = q_ind(k,i) * pow(elem_prod(natage(istk,iyr),pow(S(istk,iyr),ind_month_frac(k))) * 
                                      elem_prod(sel_ind(k,iyr) , wt_ind(k,iyr)),q_power_ind(k));
     }
     for (i=1;i<=nyrs_ind_age(k);i++)
     {        
       iyr = yrs_ind_age(k,i); 
-      dvar_vector tmp_n   = elem_prod(pow(S(iyr),ind_month_frac(k)),elem_prod(sel_ind(k,iyr),natage(iyr)));  
+      dvar_vector tmp_n   = elem_prod(pow(S(istk,iyr),ind_month_frac(k)),elem_prod(sel_ind(k,iyr),natage(istk,iyr)));  
       sum_tmp             = sum(tmp_n);
       if (use_age_err)
         eac_ind(k,i)      = age_err * tmp_n/sum_tmp;
@@ -2173,19 +2174,20 @@ FUNCTION Get_Survey_Predictions
     for (i=1;i<=nyrs_ind_length(k);i++)
     {        
       iyr          = yrs_ind_length(k,i); 
-      tmp_n        = elem_prod(pow(S(iyr),ind_month_frac(k)),elem_prod(sel_ind(k,iyr),natage(iyr)));  
+      tmp_n        = elem_prod(pow(S(istk,iyr),ind_month_frac(k)),elem_prod(sel_ind(k,iyr),natage(istk,iyr)));  
       sum_tmp      = sum(tmp_n);
       tmp_n       /= sum_tmp;
       // cout <<tmp_n<<endl<<endl<<P_age2len<<endl;
-      elc_ind(k,i) = tmp_n * P_age2len ;
+      int igrowth = growth_map(istk,yy_sr(istk,iyr));
+      elc_ind(k,i) = tmp_n * P_age2len(igrowth) ;
     }
     iyr=yrs_ind(k,nyrs_ind(k));
-    dvar_vector natagetmp = elem_prod(S(endyr),natage(endyr));
+    dvar_vector natagetmp = elem_prod(S(istk,endyr),natage(istk,endyr));
     natagetmp(2,nages) = ++natagetmp(1,nages-1)*1.;
-    natagetmp(1)       = SRecruit(Sp_Biom(endyr+1-rec_age),yy_sr(endyr+1));
-    natagetmp(nages)  += natage(endyr,nages)*S(endyr,nages);
+    natagetmp(1)       = SRecruit(Sp_Biom(istk,endyr+1-rec_age),yy_sr(istk,endyr+1));
+    natagetmp(nages)  += natage(istk,endyr,nages)*S(istk,endyr,nages);
     // Assume same survival in 1st part of next year as same as first part of current
-    pred_ind_nextyr(k) = q_ind(k,nyrs_ind(k)) * pow(elem_prod(natagetmp,pow(S(endyr),ind_month_frac(k))) * 
+    pred_ind_nextyr(k) = q_ind(k,nyrs_ind(k)) * pow(elem_prod(natagetmp,pow(S(istk,endyr),ind_month_frac(k))) * 
                                      elem_prod(sel_ind(k,endyr) , wt_ind(k,endyr)),q_power_ind(k));
   }
 
@@ -2204,7 +2206,10 @@ FUNCTION Get_Fishery_Predictions
  // predicted length compositions !!
     for (i=1; i<=nyrs_fsh_length(k); i++)
     {
-      elc_fsh(k,i) = catage(k,yrs_fsh_length(k,i))*P_age2len;
+      int istk = sel_map(1,k);
+      int iyr = yrs_fsh_length(k,i);
+      int igrowth = growth_map(istk,yy_sr(istk,iyr));
+      elc_fsh(k,i) = catage(k,yrs_fsh_length(k,i))*P_age2len(igrowth);
       elc_fsh(k,i) /= sum(elc_fsh(k,i));
     }
   }
@@ -2363,10 +2368,10 @@ FUNCTION evaluate_the_objective_function
   Srv_Like();
   Sel_Like();
   Compute_priors();
-  for (i=1;i<=nreg;i++)
+  for (r=1;r<=nregs;r++)
   {
-    if (active(log_Rzero(i)))
-      obj_fun += .5 * square(log_Rzero(i)-mean_log_rec(i));
+    if (active(log_Rzero(r)))
+      obj_fun += .5 * square(log_Rzero(r)-mean_log_rec(r));
   }
   //obj_fun += sum(.5 * square(log_Rzero(1)-mean_log_rec(1))); // A slight penalty to keep Rzero in reality...
   
@@ -2434,15 +2439,18 @@ FUNCTION Rec_Like
     sigmarsq   =  square(sigmar);
     if (current_phase()>2)
     {
-      for (i=1;i<=nreg;i++)
+      for (s=1;s<=nstk;s++)
       {
-        if (last_phase())
-          pred_rec(yy_shift_st(i),yy_shift_end(i)) = SRecruit(Sp_Biom(yy_shift_st(i)-rec_age,yy_shift_end(i)-rec_age).shift(yy_shift_st(i))(yy_shift_st(i),yy_shift_end(i)),i)(yy_shift_st(i),yy_shift_end(i));
-        else 
-          pred_rec(yy_shift_st(i),yy_shift_end(i)) = .1+SRecruit(Sp_Biom(yy_shift_st(i)-rec_age,yy_shift_end(i)-rec_age).shift(yy_shift_st(i))(yy_shift_st(i),yy_shift_end(i)),i)(yy_shift_st(i),yy_shift_end(i));
+        for (r=1;r<=nreg(s);r++)
+        {
+          if (last_phase())
+            pred_rec(yy_shift_st(s,r),yy_shift_end(s,r)) = SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
+          else 
+            pred_rec(yy_shift_st(s,r),yy_shift_end(s,r)) = .1+SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
+        }
       }
 
-      dvar_vector SSQRec(1,nreg);
+      dvar_vector SSQRec(1,nregs);
       SSQRec.initialize();
       dvar_vector chi(styr_rec_est(1),endyr_rec_est(nreg));
       chi.initialize();
