@@ -2057,73 +2057,80 @@ FUNCTION Get_Mortality
   
 
 FUNCTION Get_Numbers_at_Age
-  // natage(styr,1) = mfexp(mean_log_rec + rec_dev(styr)); 
+  // natage(s,styr,1) = mfexp(mean_log_rec(cum_regs(s)+yy_sr(s,styr)) + rec_dev(s,styr)); 
   // Recruitment in subsequent years
-  for (i=styr+1;i<=endyr;i++)
-    natage(i,1)=mfexp(mean_log_rec(yy_sr(i))+rec_dev(i));
-
-  mod_rec(styr)  = natage(styr,1);
-
-  for (i=styr;i<=endyr;i++)
+  for (s=1;s<=nstk;s++)
   {
-    if (Popes)
+    for (i=styr+1;i<=endyr;i++)
+      natage(s,i,1)=mfexp(mean_log_rec(cum_regs(s)+yy_sr(s,i))+rec_dev(s,i));
+    
+    mod_rec(s,styr)  = natage(s,styr,1);
+    
+    for (i=styr;i<=endyr;i++)
     {
-      dvariable  t1=mfexp(-natmort(i)*0.5);
-      dvariable  t2=mfexp(-natmort(i));
-      Catch_at_Age(i);
-      // Pope's approximation //   Next year N     =   This year x NatSurvivl - catch
-      natage(i+1)(2,nages) = ++(natage(i)(1,nages-1)*t2 - catage_tot(i)(1,nages-1)*t1);
-      Ftot(i)(1,nages-1) = log(natage(i)(1,nages-1)) - --log(natage(i+1)(2,nages)) - natmort(i);
-      natage(i+1,nages)   += natage(i,nages)*t2 - catage_tot(i,nages)*t1;
-      // Approximation to "F" continuous form for computing within-year sp biomass
-      Ftot(i,nages)      = log(natage(i,nages-1)+natage(i,nages)) -log(natage(i+1,nages)) -natmort(i);
-      // write_input_log <<i<<" "<<Ftot(i)(nages-4,nages)<<endl; // cout <<i<<" "<<natage(i)<<endl; // cout <<i<<" "<<natage(i+1)<<endl;
-      dvariable ctmp=sum(catage_tot(i));
-      for (k=1;k<=nfsh;k++)
+      if (Popes)
       {
-        F(k,i)  = Ftot(i) * sum(catage(k,i))/ctmp;
+        dvariable  t1=mfexp(-natmort(s,i)*0.5);
+        dvariable  t2=mfexp(-natmort(s,i));
+        Catch_at_Age(s,i);
+        // Pope's approximation //   Next year N     =   This year x NatSurvivl - catch
+        natage(s,i+1)(2,nages) = ++(natage(s,i)(1,nages-1)*t2 - catage_tot(s,i)(1,nages-1)*t1);
+        Ftot(s,i)(1,nages-1) = log(natage(s,i)(1,nages-1)) - --log(natage(s,i+1)(2,nages)) - natmort(s,i);
+        natage(s,i+1,nages)   += natage(s,i,nages)*t2 - catage_tot(s,i,nages)*t1;
+        // Approximation to "F" continuous form for computing within-year sp biomass
+        Ftot(s,i,nages)      = log(natage(s,i,nages-1)+natage(s,i,nages)) -log(natage(s,i+1,nages)) -natmort(s,i);
+        // write_input_log <<s<<" "<<i<<" "<<Ftot(s,i)(nages-4,nages)<<endl; // cout <<s<<" "<<i<<" "<<natage(s,i)<<endl; // cout <<s<<" "<<i<<" "<<natage(s,i+1)<<endl;
+        dvariable ctmp=sum(catage_tot(s,i));
+        for (k=1;k<=nfsh;k++)
+        {
+          if (sel_map(1,k) == s)
+            F(k,i)  = Ftot(s,i) * sum(catage(k,i))/ctmp;
+        }
+        Z(s,i)    = Ftot(s,i)+natmort(s,i);
+        S(s,i)    = mfexp(-Z(s,i));
       }
-      Z(i)    = Ftot(i)+natmort(i);
-      S(i)    = mfexp(-Z(i));
+      else // Baranov
+      {
+        // get_Fs( i ); //ojo, add switch here for different catch equation XX
+        // if (i!=endyr)
+        // {
+          natage(s,i+1)(2,nages) = ++elem_prod(natage(s,i)(1,nages-1),S(s,i)(1,nages-1));
+          natage(s,i+1,nages)   +=natage(s,i,nages)*S(s,i,nages);
+        // }
+      }
+      Catch_at_Age(s,i);
+      Sp_Biom(s,i)  = elem_prod(natage(s,i),pow(S(s,i),spmo_frac)) * wt_mature(s);
+      if (i<endyr) mod_rec(s,i+1)  = natage(s,i+1,1);
     }
-    else // Baranov
-    {
-      // get_Fs( i ); //ojo, add switch here for different catch equation XX
-      // if (i!=endyr)
-      // {
-        natage(i+1)(2,nages) = ++elem_prod(natage(i)(1,nages-1),S(i)(1,nages-1));
-        natage(i+1,nages)   +=natage(i,nages)*S(i,nages);
-      // }
-    }
-    Catch_at_Age(i);
-    Sp_Biom(i)  = elem_prod(natage(i),pow(S(i),spmo_frac)) * wt_mature; 
-    if (i<endyr) mod_rec(i+1)  = natage(i+1,1);
   }
   
-  for (i=2; i<=nreg; i++)
+  for (s=1;s<=nstk;s++)
   {
-    Bzero(i) = Sp_Biom(reg_shift(i-1)-rec_age) ;  //reg_shift(i-1)-rec_age //(reg_shift(i-1)-nages)+1
+    for (r=2; r<=nreg(s); r++)
+    {
+      Bzero(cum_regs(s)+r) = Sp_Biom(reg_shift(s,i-1)-rec_age) ;  //reg_shift(s,i-1)-rec_age //(reg_shift(s,i-1)-nages)+1
+    }
   }
-
-  for (i=1; i<=nreg; i++)
+  for (r=1; r<=nregs; r++)
   {
-    phizero(i) = Bzero(i)/Rzero(i);
+    phizero(r) = Bzero(r)/Rzero(r);
 
+    int irec=rec_map(stk_reg_map(1,r),stk_reg_map(2,r));
     switch (SrType)
     {
       case 1:
-        alpha(i) = log(-4.*steepness(i)/(steepness(i)-1.));
+        alpha(r) = log(-4.*steepness(irec)/(steepness(irec)-1.));
         break;
       case 2:
       {
-        alpha(i)  =  Bzero(i) * (1. - (steepness(i) - 0.2) / (0.8*steepness(i)) ) / Rzero(i);
-        beta(i)   = (5. * steepness(i) - 1.) / (4. * steepness(i) * Rzero(i));
+        alpha(r)  =  Bzero(r) * (1. - (steepness(irec) - 0.2) / (0.8*steepness(irec)) ) / Rzero(r);
+        beta(r)   = (5. * steepness(irec) - 1.) / (4. * steepness(irec) * Rzero(r));
       }
       break;
       case 4:
       {
-        beta(i)  = log(5.*steepness(i))/(0.8*Bzero(i)) ;
-        alpha(i) = log(Rzero(i)/Bzero(i))+beta(i)*Bzero(i);
+        beta(r)  = log(5.*steepness(irec))/(0.8*Bzero(r)) ;
+        alpha(r) = log(Rzero(r)/Bzero(r))+beta(r)*Bzero(r);
       }
         break;
     }
@@ -2140,7 +2147,7 @@ FUNCTION Get_Survey_Predictions
     // Set rest of q's in time series equal to the random walk for current (avoids tricky tails...)
     for (i=2;i<=(1+npars_rw_q(k));i++)
     {
-			// get index for the number of observations (can be different than number of q's)
+      // get index for the number of observations (can be different than number of q's)
       ii = yrs_rw_q(k,i-1) - yrs_ind(k,1) + 1;  
       q_ind(k,ii)  = q_ind(k,ii-1)*mfexp(log_rw_q_ind(k,i-1));
       for (iyr=ii+1;iyr<=nyrs_ind(k);iyr++)
@@ -2300,6 +2307,46 @@ FUNCTION void Catch_at_Age(const int& i)
     {
       catage(k,i) = elem_prod(elem_div(F(k,i),Z(i)),elem_prod(1.-S(i),natage(i)));
       pred_catch(k,i) = catage(k,i)*wt_fsh(k,i);
+    }
+  }
+  
+FUNCTION void Catch_at_Age(const int& s, const int& i)
+  dvariable vbio=0.;
+  dvariable pentmp;
+  dvar_vector Nmid(1,nages);
+  dvar_vector Ctmp(1,nages);
+  catage_tot(s,i).initialize();
+  if (Popes)
+  {
+    Nmid = elem_prod(natage(s,i),mfexp(-M(s,i)/2) ); 
+  }
+  for (k=1;k<=nfsh;k++)
+  {
+    if (sel_map(1,k) == s)
+    {
+      if (Popes)
+      {
+        pentmp=0.;
+        Ctmp = elem_prod(Nmid,sel_fsh(k,i));
+        vbio = Ctmp*wt_fsh(k,i);
+        //Kludge to go here...
+        // dvariable SK = posfun( (.98*vbio - catch_bio(k,i))/vbio , 0.1 , pentmp );
+        dvariable SK = posfun( (vbio - catch_bio(k,i))/vbio , 0.1 , pentmp );
+        catch_tmp    = vbio - SK*vbio; 
+        hrate        = catch_tmp / vbio;
+        fpen(4) += pentmp;
+        Ctmp *= hrate;                          
+        if (hrate>1) {cout << catch_tmp<<" "<<vbio<<endl;exit(1);}
+        catage_tot(s,i) += Ctmp;                      
+        catage(k,i)    = Ctmp;                      
+        if (last_phase())
+          pred_catch(k,i) = Ctmp*wt_fsh(k,i);
+      }
+      else
+      {
+        catage(k,i) = elem_prod(elem_div(F(k,i),Z(s,i)),elem_prod(1.-S(s,i),natage(s,i)));
+        pred_catch(k,i) = catage(k,i)*wt_fsh(k,i);
+      }
     }
   }
   //+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==+==
@@ -3371,34 +3418,38 @@ FUNCTION Get_Bzero
   Bzero.initialize();
   Rzero    =  mfexp(log_Rzero); 
 
-  dvar_vector survtmp(1,nages);
-  survtmp = mfexp(-M(styr));
+  dvar_matrix survtmp(1,nstk,1,nages);
+  for (s=1;s<=nstk;s++)
+    survtmp(s) = mfexp(-M(s,styr));
 
-  dvar_matrix natagetmp(styr_rec,styr,1,nages);
+  dvar3_array natagetmp(1,nstk,styr_rec,styr,1,nages);
   natagetmp.initialize();
 
-  natagetmp(styr_rec,1) = Rzero(1);
-  for (j=2; j<=nages; j++)
-    natagetmp(styr_rec,j) = natagetmp(styr_rec,j-1) * survtmp(j-1);
-  natagetmp(styr_rec,nages) /= (1.-survtmp(nages)); 
-
-  Bzero(1) = elem_prod(wt_mature , pow(survtmp,spmo_frac))*natagetmp(styr_rec) ;
   Sp_Biom.initialize();
-  Sp_Biom(styr_sp,styr_rec-1) = Bzero(1);
-  for (i=styr_rec;i<styr;i++)
+  for (s=1;s<=nstk;s++)
   {
-    Sp_Biom(i) = elem_prod(natagetmp(i),pow(survtmp,spmo_frac)) * wt_mature; 
-    // natagetmp(i,1)          = mfexp(rec_dev(i) + log_Rzero); // OjO numbers a function of mean not SR curve...
-    natagetmp(i,1)          = mfexp(rec_dev(i) + mean_log_rec(yy_sr(i)));
-    natagetmp(i+1)(2,nages) = ++elem_prod(natagetmp(i)(1,nages-1),mfexp(-M(styr)(1,nages-1)) );
-    natagetmp(i+1,nages)   += natagetmp(i,nages)*mfexp(-M(styr,nages));
+    natagetmp(s,styr_rec,1) = Rzero(cum_regs(s)+1);
+    for (j=2; j<=nages; j++)
+      natagetmp(s,styr_rec,j) = natagetmp(s,styr_rec,j-1) * survtmp(s,j-1);
+    natagetmp(s,styr_rec,nages) /= (1.-survtmp(s,nages));
+    
+    Bzero(cum_regs(s)+1) = elem_prod(wt_mature(s) , pow(survtmp(s),spmo_frac))*natagetmp(s,styr_rec);
+    Sp_Biom(s)(styr_sp,styr_rec-1) = Bzero(cum_regs(s)+1);
+    for (i=styr_rec;i<styr;i++)
+    {
+      Sp_Biom(s,i) = elem_prod(natagetmp(s,i),pow(survtmp(s),spmo_frac)) * wt_mature(s);
+      // natagetmp(s,i,1)          = mfexp(rec_dev(s,i) + log_Rzero(cum_regs(s)+1)); // OjO numbers a function of mean not SR curve...
+      natagetmp(s,i,1)          = mfexp(rec_dev(s,i) + mean_log_rec(cum_regs(s)+yy_sr(s,i)));
+      natagetmp(s,i+1)(2,nages) = ++elem_prod(natagetmp(s,i)(1,nages-1),mfexp(-M(s,styr)(1,nages-1)) );
+      natagetmp(s,i+1,nages)   += natagetmp(s,i,nages)*mfexp(-M(s,styr,nages));
+    }
+    // This sets first year recruitment as deviation from mean recruitment (since SR curve can
+    // be defined for different periods and is treated semi-independently)
+    natagetmp(s,styr,1)   = mfexp(rec_dev(s,styr) + mean_log_rec(cum_regs(s)+yy_sr(styr)));
+    mod_rec(s)(styr_rec,styr) = column(natagetmp(s),1);
+    natage(s,styr)  = natagetmp(s,styr); // OjO
+    Sp_Biom(s,styr) = elem_prod(natagetmp(s,styr),pow(survtmp(s),spmo_frac)) * wt_mature(s); 
   }
-  // This sets first year recruitment as deviation from mean recruitment (since SR curve can
-  // be defined for different periods and is treated semi-independently)
-  natagetmp(styr,1)   = mfexp(rec_dev(styr) + mean_log_rec(yy_sr(styr)));
-  mod_rec(styr_rec,styr) = column(natagetmp,1);
-  natage(styr)  = natagetmp(styr); // OjO
-  Sp_Biom(styr) = elem_prod(natagetmp(styr),pow(survtmp,spmo_frac)) * wt_mature; 
   // cout <<natagetmp<<endl;exit(1);
 
 FUNCTION dvariable Requil(dvariable& phi, int iyr)
