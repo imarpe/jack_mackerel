@@ -1400,7 +1400,7 @@ PARAMETER_SECTION
   vector post_priors_indq(1,nind)
   objective_function_value obj_fun
   vector obj_comps(1,14)
-  init_number repl_F(5)
+  init_vector repl_F(1,nstk,5)
 
   sdreport_vector repl_yld(1,nstk)
   sdreport_vector repl_SSB(1,nstk)
@@ -1763,32 +1763,42 @@ FUNCTION dvar_matrix ALK(dvar_vector& mu, dvar_vector& sig, dvector& x)
 //---------------------------------------------------------------------------
 FUNCTION Get_Replacement_Yield
   // compute next year's yield and SSB and add penalty to ensure F gives same SSB... 
-  dvar_vector ntmp(1,nages);
-  ntmp = natage(endyr+1);
+  dvar_matrix ntmp(1,nstk,1,nages);
+  for (s=1;s<=nstk;s++)
+    ntmp(s) = natage(s,endyr+1);
   dvariable SSBnext;
   dvar_matrix Ftmp(1,nfsh,1,nages);
-  dvar_vector Ctmp(1,nages);
-  dvar_vector Ztmp(1,nages);
-  dvar_vector Stmp(1,nages);
+  dvar_matrix Ctmp(1,nstk,1,nages);
+  dvar_matrix Ztmp(1,nstk,1,nages);
+  dvar_matrix Stmp(1,nstk,1,nages);
   Ctmp.initialize();
-  Ztmp  = M(endyr);
-  dvariable sumF=0.;
+  for (s=1;s<=nstk;s++)
+    Ztmp(s)  = M(s,endyr);
+  dvar_vector sumF(1,nstk);
+  sumF.initialize();
   for (k=1;k<=nfsh;k++)
-    sumF += sum(F(k,endyr));
+    sumF(sel_map(1,k)) += sum(F(k,endyr));
   for (k=1;k<=nfsh;k++)
   {
-    Ftmp(k) = repl_F*sum(F(k,endyr)) / sumF;
-    Ztmp   += Ftmp(k);
+    int istk   = sel_map(1,k);
+    Ftmp(k)    = repl_F(istk)*sum(F(k,endyr)) / sumF(istk);
+    Ztmp(istk)+= Ftmp(k);
   }
   Stmp = mfexp(-Ztmp);
   for (k=1;k<=nfsh;k++)
-    Ctmp += elem_prod(wt_fsh(k,endyr),elem_prod(elem_div(Ftmp(k),Ztmp),elem_prod(1.-Stmp,ntmp)) );
-  repl_yld = sum(Ctmp) ;
-  ntmp(2,nages) = ++elem_prod(Stmp(1,nages-1),ntmp(1,nages-1));
-  ntmp(nages)  += ntmp(nages)*Stmp(nages);
-  ntmp(1)       = mean(mod_rec);
-  repl_SSB  = elem_prod(ntmp, pow(Stmp,spmo_frac)) * wt_mature; 
-  obj_fun  += 200.*square(log(Sp_Biom(endyr))-log(repl_SSB));
+  {
+    int istk = sel_map(1,k);
+    Ctmp(istk) += elem_prod(wt_fsh(k,endyr),elem_prod(elem_div(Ftmp(k),Ztmp(istk)),elem_prod(1.-Stmp(istk),ntmp(istk))) );
+  }
+  for (s=1;s<=nstk;s++)
+  {
+    repl_yld(s) = sum(Ctmp(s)) ;
+    ntmp(s)(2,nages) = ++elem_prod(Stmp(s)(1,nages-1),ntmp(s)(1,nages-1));
+    ntmp(s,nages)   += ntmp(s,nages)*Stmp(s,nages);
+    ntmp(s,1)        = mean(mod_rec(s));
+    repl_SSB(s)  = elem_prod(ntmp(s), pow(Stmp(s),spmo_frac)) * wt_mature(s); 
+    obj_fun  += 200.*square(log(Sp_Biom(s,endyr))-log(repl_SSB(s)));
+  }
   
 FUNCTION Get_Selectivity
   // Calculate the logistic selectivity (Only if being used...)   
@@ -4188,6 +4198,32 @@ FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr)
   SBtmp  += Ntmp(nages)*wt_mature(nages)*pow(srvtmp(nages),spmo_frac);
   return(SBtmp/phizero(yy_sr(iyr)));
 
+FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr,int istk)
+  dvariable SBtmp;
+  dvar_vector Ntmp(1,nages);
+  dvar_vector srvtmp(1,nages);
+  SBtmp.initialize();
+  Ntmp.initialize();
+  srvtmp.initialize();
+  dvar_matrix Ftmp(1,nages,1,nfsh); // note that this is in reverse order of usual indexing (age, fshery)
+  Ftmp = sel_tmp;
+  for (j=1;j<=nages;j++) 
+  {
+    Ftmp(j) = elem_prod(Ftmp(j), trial_F * Fratio);
+    srvtmp(j)  = mfexp(-sum(Ftmp(j)) - M(istk,iyr,j));
+  }
+  Ntmp(1)=1.;
+  j=1;
+  SBtmp  += Ntmp(j)*wt_mature(j)*pow(srvtmp(j),spmo_frac);
+  for (j=2;j<nages;j++)
+  {
+    Ntmp(j) = Ntmp(j-1)*srvtmp(j-1);
+    SBtmp  += Ntmp(j)*wt_mature(j)*pow(srvtmp(j),spmo_frac);
+  }
+  Ntmp(nages)=Ntmp(nages-1)*srvtmp(nages-1)/(1.-srvtmp(nages));
+  SBtmp  += Ntmp(nages)*wt_mature(nages)*pow(srvtmp(nages),spmo_frac);
+  return(SBtmp/phizero(yy_sr(iyr)));
+  
 FUNCTION dvariable spr_unfished(int i)
   dvariable Ntmp;
   dvariable SBtmp;
@@ -4204,13 +4240,15 @@ FUNCTION dvariable spr_unfished(int i)
 
 FUNCTION compute_spr_rates
   //Compute SPR Rates and add them to the likelihood for Females 
-  dvariable sumF=0.;
+  dvar_vector sumF(1,nstk);
+  sumF.initialize();
   for (k=1;k<=nfsh;k++)
   {
     Fratio(k) = sum(F(k,endyr)) ;
-    sumF += Fratio(k) ;
+    sumF(sel_map(1,k)) += Fratio(k) ;
   }
-  Fratio /= sumF;
+  for (k=1;k<=nfsh;k++)
+    Fratio(k) /= sumF(sel_map(1,k));
 
   F35_est = get_spr_rates(.35);
   F50_est = get_spr_rates(.50);
