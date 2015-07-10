@@ -381,6 +381,7 @@ DATA_SECTION
   init_int retro            // Retro years to peel off (0 means full dataset)
   !! log_input(retro);
   init_imatrix rec_map(1,nstk,1,nreg)
+  int nrec
  LOCAL_CALCS
   nrec = max(rec_map);
  END_CALCS
@@ -431,6 +432,7 @@ DATA_SECTION
 
 //-----GROWTH PARAMETERS--------------------------------------------------
   init_imatrix growth_map(1,nstk,1,nreg)
+  int ngrowth
  LOCAL_CALCS
   ngrowth = max(growth_map);
  END_CALCS
@@ -468,8 +470,13 @@ DATA_SECTION
 
 //---------------------------------------------------------------------------
   init_imatrix mort_map(1,nstk,1,nreg)
+  int nmort
  LOCAL_CALCS
   nmort = max(mort_map);
+ END_CALCS
+  int npar
+ LOCAL_CALCS
+  npar = max(max(nrec,ngrowth),nmort);
  END_CALCS
   // Basic M
   init_vector  natmortprior(1,nmort)
@@ -1376,7 +1383,7 @@ PARAMETER_SECTION
 
  // Likelihood value names         
   number sigma
-  vector rec_like(1,4)
+  matrix rec_like(1,nstk,1,4)
   vector catch_like(1,nfsh)
   vector age_like_fsh(1,nfsh)
 //---------------------------------NEW
@@ -1389,7 +1396,7 @@ PARAMETER_SECTION
   matrix sel_like_ind(1,nind,1,4)       
   vector ind_like(1,nind)
   vector fpen(1,6)    
-  vector post_priors(1,8)
+  vector post_priors(1,npar,1,8)
   vector post_priors_indq(1,nind)
   objective_function_value obj_fun
   vector obj_comps(1,14)
@@ -2444,81 +2451,96 @@ FUNCTION Rec_Like
         for (r=1;r<=nreg(s);r++)
         {
           if (last_phase())
-            pred_rec(yy_shift_st(s,r),yy_shift_end(s,r)) = SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
+            pred_rec(s)(yy_shift_st(s,r),yy_shift_end(s,r)) = SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
           else 
-            pred_rec(yy_shift_st(s,r),yy_shift_end(s,r)) = .1+SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
+            pred_rec(s)(yy_shift_st(s,r),yy_shift_end(s,r)) = .1+SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
         }
       }
 
       dvar_vector SSQRec(1,nregs);
       SSQRec.initialize();
-      dvar_vector chi(styr_rec_est(1),endyr_rec_est(nreg));
+      dvar_matrix chi(1,nstk,styr,endyr);
       chi.initialize();
-      for (i=1;i<=nreg;i++)
+      for (r=1;r<=nregs;r++)
       {
-        for (j=1;j<=nrecs_est_shift(i);j++)
+        int istk = stk_reg_map(1,r);
+        int ireg = stk_reg_map(2,r);
+        for (j=1;j<=nrecs_est_shift(r);j++)
         {
-          chi(yr_rec_est(i,j)) = log(mod_rec(yr_rec_est(i,j))) - log(pred_rec(yr_rec_est(i,j)));
+          chi(istk,yr_rec_est(r,j)) = log(mod_rec(istk,yr_rec_est(r,j))) - log(pred_rec(istk,yr_rec_est(r,j)));
         }
-        SSQRec(i)   = norm2( chi(styr_rec_est(i),endyr_rec_est(i)) ) ;
-        m_sigmarsq(i) =  SSQRec(i)/nrecs_est_shift(i);
-        m_sigmar(i)   =  sqrt(m_sigmarsq(i));
+        SSQRec(r)   = norm2( chi(istk,styr_rec_est(istk,ireg),endyr_rec_est(istk,ireg)) ) ;
+        m_sigmarsq(r) =  SSQRec(r)/nrecs_est_shift(r);
+        m_sigmar(r)   =  sqrt(m_sigmarsq(r));
       }
 
       if (current_phase()>4||last_phase())
-        for (i=1;i<=nreg;i++)
+        for (r=1;r<=nregs;r++)
         {
-          rec_like(1) += (SSQRec(i)+ m_sigmarsq(i)/2.)/(2*sigmarsq(i)) + nrecs_est_shift(i)*log_sigmar(i); 
+          int istk = stk_reg_map(1,r);
+          rec_like(istk,1) += (SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(r); 
         }
       else
-        for (i=1;i<=nreg;i++)
+        for (r=1;r<=nregs;r++)
         {
-          rec_like(1) += .1*((SSQRec(i)+ m_sigmarsq(i)/2.)/(2*sigmarsq(i)) + nrecs_est_shift(i)*log_sigmar(i)); 
+          int istk = stk_reg_map(1,r);
+          rec_like(istk,1) += .1*((SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(r)); 
         }
     }
 
     if (last_phase())
     {
-      // Variance term for the parts not estimated by sr curve
-      if ( styr_rec_est(1) > styr_rec )
-        rec_like(4) += .5*norm2( rec_dev(styr_rec,styr_rec_est(1)-1) )/sigmarsq(1) + ((styr_rec_est(1)-1)-styr_rec)*log(sigmar(1)) ;
-      
-      if ( endyr > endyr_rec_est(nreg) )
-        rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(nreg)+1,endyr) )/sigmarsq(nreg) + (endyr-(endyr_rec_est(nreg)+1))*log(sigmar(nreg)) ;
-      
-      for (i=2;i<=nreg;i++)
+      for (s=1;s<=nstk;s++)
       {
-        if ( (styr_rec_est(i)-1) > endyr_rec_est(i-1) )
-          rec_like(4) += .5*norm2( rec_dev(endyr_rec_est(i-1)+1,styr_rec_est(i)-1) )/sigmarsq(i-1) + ((styr_rec_est(i)-1)-(endyr_rec_est(i-1)+1))*log(sigmar(i-1)) ;
-      }
-      
-      for (i=1;i<=nreg;i++)
-      {
-        for (j=1;j<=(nrecs_est_shift(i)-1);j++)
+        // Variance term for the parts not estimated by sr curve
+        if ( styr_rec_est(s,1) > styr_rec )
+          rec_like(s,4) += .5*norm2( rec_dev(s)(styr_rec,styr_rec_est(s,1)-1) )/sigmarsq(cum_regs(s)+1) + ((styr_rec_est(s,1)-1)-styr_rec)*log(sigmar(cum_regs(s)+1)) ;
+        
+        if ( endyr > endyr_rec_est(s,nreg(s)) )
+          rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,nreg(s))+1,endyr) )/sigmarsq(cum_regs(s)+nreg(s)) + (endyr-(endyr_rec_est(s,nreg(s))+1))*log(sigmar(cum_regs(s)+nreg(s))) ;
+        
+        for (r=2;r<=nreg(s);r++)
         {
-          if ((yr_rec_est(i,j+1)-yr_rec_est(i,j)) > 1)
-            rec_like(4) += .5*norm2( rec_dev(yr_rec_est(i,j)+1,yr_rec_est(i,j+1)-1) )/sigmarsq(i) + ((yr_rec_est(i,j+1)-1)-(yr_rec_est(i,j)+1))*log(sigmar(i)) ;
+          if ( (styr_rec_est(s,r)-1) > endyr_rec_est(s,r-1) )
+            rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,r-1)+1,styr_rec_est(s,r)-1) )/sigmarsq(cum_regs(s)+(r-1)) + ((styr_rec_est(s,r)-1)-(endyr_rec_est(s,r-1)+1))*log(sigmar(cum_regs(s)+(r-1))) ; // Ojo
+        }
+        
+        for (r=1;r<=nreg(s);r++)
+        {
+          int iregs = cum_regs(s)+r;
+          for (j=1;j<=(nrecs_est_shift(r)-1);j++)
+          {
+            if ((yr_rec_est(iregs,j+1)-yr_rec_est(iregs,j)) > 1)
+              rec_like(s,4) += .5*norm2( rec_dev(s)(yr_rec_est(iregs,j)+1,yr_rec_est(iregs,j+1)-1) )/sigmarsq(iregs) + ((yr_rec_est(iregs,j+1)-1)-(yr_rec_est(iregs,j)+1))*log(sigmar(iregs)) ;
+          }
         }
       }
     }
     else // JNI comment next line
     {
-      for (i=1;i<=nreg;i++)
+      for (r=1;r<=nregs;r++)
       {
-        for (j=1;j<=nrecs_est_shift(i);j++)
+        int istk = stk_reg_map(1,r);
+        for (j=1;j<=nrecs_est_shift(r);j++)
         {
-          rec_like(2) += square(rec_dev(yr_rec_est(i,j)));
+          rec_like(istk,2) += square(rec_dev(stk_reg_map(1,r))(yr_rec_est(r,j)));
         }
       }
     }
 
-    rec_like(2) += norm2( rec_dev(styr_rec_est(1),endyr) ) ;
+    for (s=1;s<=nstk;s++)
+    {
+      rec_like(s,2) += norm2( rec_dev(s)(styr_rec_est(s,1),endyr) ) ;
+    }
 
     if (active(rec_dev_future))
     {
       // Future recruitment variability (based on past)
-      sigmar_fut   = sigmar(nreg) ;
-      rec_like(3) += norm2(rec_dev_future)/(2*square(sigmar_fut))+ size_count(rec_dev_future)*log(sigmar_fut);
+      for (s=1;s<=nstk;s++)
+      {
+        sigmar_fut(s)   = sigmar(cum_regs(s)+nreg(s)) ;
+        rec_like(s,3) += norm2(rec_dev_future(s))/(2*square(sigmar_fut(s)))+ size_count(rec_dev_future(s))*log(sigmar_fut(s));
+      }
     }
   }
 FUNCTION Compute_priors
@@ -2540,38 +2562,45 @@ FUNCTION Compute_priors
   }
 
   if (active(Mest))
-    post_priors(1) += square(log(Mest/natmortprior))/(2.*cvnatmortprior*cvnatmortprior); 
+    for (r=1;r<=nmort;r++)
+      post_priors(r,1) += square(log(Mest(r)/natmortprior(r)))/(2.*cvnatmortprior(r)*cvnatmortprior(r)); 
 
   if (active(Mage_offset))  
-    post_priors(1) += norm2(Mage_offset)/(2.*cvnatmortprior*cvnatmortprior); 
+    for (r=1;r<=nmort;r++)
+      post_priors(r,1) += norm2(Mage_offset(r))/(2.*cvnatmortprior(r)*cvnatmortprior(r)); 
 
   if (active(M_rw))
-    for (int i=1;i<=npars_rw_M;i++)
-      post_priors(1) +=  square(M_rw(i))/ (2.*sigma_rw_M(i)*sigma_rw_M(i)) ;
+    for (s=1;s<=nstk;s++)
+      for (int i=1;i<=npars_rw_M;i++)
+        post_priors(r,1) +=  square(M_rw(s,i))/ (2.*sigma_rw_M(s,i)*sigma_rw_M(s,i)) ;
 
-  for (int i=1;i<=nreg;i++)
+  for (int r=1;r<=nrec;r++)
   {
-    if (active(steepness(i)))
-      post_priors(2) += square(log(steepness(i)/steepnessprior(i)))/(2*cvsteepnessprior(i)*cvsteepnessprior(i)); 
+    if (active(steepness(r)))
+      post_priors(r,2) += square(log(steepness(r)/steepnessprior(r)))/(2*cvsteepnessprior(r)*cvsteepnessprior(r)); 
   }
 
-  for (int i=1;i<=nreg;i++)
+  for (int r=1;r<=nrec;r++)
   {
-    if (active(log_sigmar(i)))
-      post_priors(3) += square(log(sigmar(i)/sigmarprior(i)))/(2*cvsigmarprior(i)*cvsigmarprior(i)); 
+    if (active(log_sigmar(r)))
+      post_priors(r,3) += square(log(sigmar(r)/sigmarprior(r)))/(2*cvsigmarprior(r)*cvsigmarprior(r)); 
   }
 //--------------------------NEW------------------------------------
   if (active(log_Linf))
-    post_priors(4) += square(log_Linf-log_Linfprior)/(2*cvLinfprior*cvLinfprior); 
+    for (int r=1;r<=ngrowth;r++)
+      post_priors(r,4) += square(log_Linf(r)-log_Linfprior(r))/(2*cvLinfprior(r)*cvLinfprior(r)); 
 
   if (active(log_k))
-    post_priors(5) += square(log_k-log_kprior)/(2*cvkprior*cvkprior); 
+    for (int r=1;r<=ngrowth;r++)
+      post_priors(r,5) += square(log_k(r)-log_kprior(r))/(2*cvkprior(r)*cvkprior(r)); 
 
   if (active(log_Lo))
-    post_priors(6) += square(log_Lo-log_Loprior)/(2*cvLoprior*cvLoprior); 
+    for (int r=1;r<=ngrowth;r++)
+      post_priors(r,6) += square(log_Lo(r)-log_Loprior(r))/(2*cvLoprior(r)*cvLoprior(r)); 
 
   if (active(log_sdage))
-    post_priors(7) += square(log_sdage-log_sdageprior)/(2*cvsdageprior*cvsdageprior); 
+    for (int r=1;r<=ngrowth;r++)
+      post_priors(r,7) += square(log_sdage(r)-log_sdageprior(r))/(2*cvsdageprior(r)*cvsdageprior(r)); 
 FUNCTION Fmort_Pen
   // Phases less than 3, penalize High F's---------------------------------
   if (current_phase()<3)
