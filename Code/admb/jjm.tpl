@@ -4172,6 +4172,49 @@ FUNCTION dvariable get_spr_rates(double spr_percent)
   RETURN_ARRAYS_DECREMENT();
   return(F1);
 
+FUNCTION dvariable get_spr_rates(double spr_percent,int istk)
+  RETURN_ARRAYS_INCREMENT();
+  dvar_matrix sel_tmp(1,nages,1,nfsh);
+  sel_tmp.initialize();
+  for (k=1;k<=nfsh;k++)
+    if (sel_map(1,k) == istk)
+      for (j=1;j<=nages;j++)
+        sel_tmp(j,k) = sel_fsh(k,endyr,j); // NOTE uses last-year of fishery selectivity for projections.
+  dvar_vector sumF(1,nstk);
+  sumF.initialize();
+  for (k=1;k<=nfsh;k++)
+  {
+    Fratio(k) = sum(F(k,endyr)) ;
+    sumF(sel_map(1,k)) += Fratio(k) ;
+  }
+  for (k=1;k<=nfsh;k++)
+    Fratio(k) /= sumF(sel_map(1,k));
+  double df=1.e-3;
+  dvariable F1 ;
+  F1.initialize();
+  F1 = .8*natmortprior(mort_map(istk,1)); //Ojo: first regime //nreg(istk)
+  dvariable F2;
+  dvariable F3;
+  dvariable yld1;
+  dvariable yld2;
+  dvariable yld3;
+  dvariable dyld;
+  dvariable dyldp;
+  // Newton Raphson stuff to go here
+  for (int ii=1;ii<=6;ii++)
+  {
+    F2     = F1 + df;
+    F3     = F1 - df;
+    yld1   = -1000*square(log(spr_percent/spr_ratio(F1, sel_tmp,styr,istk)));
+    yld2   = -1000*square(log(spr_percent/spr_ratio(F2, sel_tmp,styr,istk)));
+    yld3   = -1000*square(log(spr_percent/spr_ratio(F3, sel_tmp,styr,istk)));
+    dyld   = (yld2 - yld3)/(2*df);                          // First derivative (to find the root of this)
+    dyldp  = (yld3-(2*yld1)+yld2)/(df*df);  // Newton-Raphson approximation for second derivitive
+    F1    -= dyld/dyldp;
+  }
+  RETURN_ARRAYS_DECREMENT();
+  return(F1);
+  
 FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr)
   dvariable SBtmp;
   dvar_vector Ntmp(1,nages);
@@ -4214,15 +4257,15 @@ FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr,int i
   }
   Ntmp(1)=1.;
   j=1;
-  SBtmp  += Ntmp(j)*wt_mature(j)*pow(srvtmp(j),spmo_frac);
+  SBtmp  += Ntmp(j)*wt_mature(istk,j)*pow(srvtmp(j),spmo_frac);
   for (j=2;j<nages;j++)
   {
     Ntmp(j) = Ntmp(j-1)*srvtmp(j-1);
-    SBtmp  += Ntmp(j)*wt_mature(j)*pow(srvtmp(j),spmo_frac);
+    SBtmp  += Ntmp(j)*wt_mature(istk,j)*pow(srvtmp(j),spmo_frac);
   }
   Ntmp(nages)=Ntmp(nages-1)*srvtmp(nages-1)/(1.-srvtmp(nages));
-  SBtmp  += Ntmp(nages)*wt_mature(nages)*pow(srvtmp(nages),spmo_frac);
-  return(SBtmp/phizero(yy_sr(iyr)));
+  SBtmp  += Ntmp(nages)*wt_mature(istk,nages)*pow(srvtmp(nages),spmo_frac);
+  return(SBtmp/phizero(cum_regs(istk)+yy_sr(istk,iyr)));
   
 FUNCTION dvariable spr_unfished(int i)
   dvariable Ntmp;
@@ -4250,15 +4293,18 @@ FUNCTION compute_spr_rates
   for (k=1;k<=nfsh;k++)
     Fratio(k) /= sumF(sel_map(1,k));
 
-  F35_est = get_spr_rates(.35);
-  F50_est = get_spr_rates(.50);
-  F40_est = get_spr_rates(.40);
+  for (s=1;s<=nstk;s++)
+  {
+    F35_est(s) = get_spr_rates(.35,s);
+    F50_est(s) = get_spr_rates(.50,s);
+    F40_est(s) = get_spr_rates(.40,s);
+  }
 
   for (k=1;k<=nfsh;k++)
   {
-    F50(k) = F50_est * (Fratio(k));
-    F40(k) = F40_est * (Fratio(k));
-    F35(k) = F35_est * (Fratio(k));
+    F50(k) = F50_est(sel_map(1,k)) * (Fratio(k));
+    F40(k) = F40_est(sel_map(1,k)) * (Fratio(k));
+    F35(k) = F35_est(sel_map(1,k)) * (Fratio(k));
   }
   cout << F50<<endl<<F40<<endl<<F35<<endl;
 
