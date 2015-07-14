@@ -4017,8 +4017,8 @@ REPORT_SECTION
 FUNCTION write_msy_out
   ofstream msyout("msyout.dat");
   msyout << " # Natural Mortality       " <<endl;
-  for (j=1;j<=nages;j++) 
-    msyout <<M <<" ";
+  for (s=1;s<=nstk;s++) 
+    msyout <<M(s) <<" ";
   msyout <<endl;
   msyout << spawnmo<< "  # Spawnmo                   " <<endl;
   msyout <<"# Wt spawn"<<endl<< wt_pop<< endl;
@@ -4051,13 +4051,14 @@ FUNCTION write_projout
   projout<< " 1 # Flag to solve for F in first year or not 0==don't solve"<<endl;
   // Flag to use 2nd-year catch/TAC
   projout<< "0 # Flag to use 2nd-year catch/TAC"<<endl;
+  projout << nstk<<"   # Number of stocks"<<endl;
   projout << nfsh<<"   # Number of fisheries"<<endl;
   projout <<"14   # Number of projection years"<<endl;
   projout <<"1000 # Number of simulations"<<endl;
   projout <<endyr<< " # Begin year of projection" <<endl;
   projout <<nages<< " # Number of ages" <<endl;
-  for (j=1;j<=nages;j++) 
-    projout <<M <<" ";
+  for (s=1;s<=nstk;s++) 
+    projout <<M(s) <<" "<<endl;
   projout << " # Natural Mortality       " <<endl;
   double sumtmp;
   sumtmp = 0.;
@@ -4070,13 +4071,15 @@ FUNCTION write_projout
    //  + fmort_dev(k,endyr)) /Fmort(endyr)<<" ";
 
   projout << "   # Fratio                  " <<endl;
-  dvariable sumF=0.;
+  dvar_vector sumF(1,nstk);
+  sumF.initialize();
   for (k=1;k<=nfsh;k++)
   {
     Fratio(k) = sum(F(k,endyr)) ;
-    sumF += Fratio(k) ;
+    sumF(sel_map(1,k)) += Fratio(k) ;
   }
-  Fratio /= sumF;
+  for (k=1;k<=nfsh;k++)
+    Fratio(k) /= sumF(sel_map(1,k));
   projout << Fratio         <<endl;
   projout <<"  # average f" <<endl;
   projout << " 1  # author f                  " <<endl;
@@ -4091,11 +4094,15 @@ FUNCTION write_projout
   for (k=1;k<=nfsh;k++) 
     projout<< sel_fsh(k,endyr) <<" "<<endl;
   projout<< endl;
-  projout <<"# natage"<<endl<< natage(endyr) << endl;
+  projout <<"# natage"<<endl;
+  for (s=1;s<=nstk;s++)
+    projout << natage(s,endyr) << endl;
   if (styr<(1977-rec_age-1))
   {
     projout <<"#_N_recruitment_years (not including last 1 estimates)"<<endl<<endyr-(1977+rec_age+1) << endl;
-    projout <<"#_Recruitment_start_at_1977_yearclass=1978_for_age_1_recruits"<<yy(1977+rec_age,endyr-1)<<endl<<mod_rec(1977+rec_age,endyr-1)<< endl;
+    projout <<"#_Recruitment_start_at_1977_yearclass=1978_for_age_1_recruits"<<yy(1977+rec_age,endyr-1)<<endl;
+    for (s=1;s<=nstk;s++)
+      projout << mod_rec(s)(1977+rec_age,endyr-1)<< endl;
   }
 
 FUNCTION write_proj
@@ -4115,14 +4122,16 @@ FUNCTION write_proj
  // Need to correct for maxf standardization 
 
  dvector seltmp(1,nages);
- double sumF = 0. ;
+ dvar_vector sumF(1,nstk);
+ sumF.initialize();
  seltmp.initialize();
  for (k=1;k<=nfsh;k++)
  {
-    Fratio(k) = sum(F(k,endyr)) ;
-    sumF += value(Fratio(k)) ;
+   Fratio(k) = sum(F(k,endyr)) ;
+   sumF(sel_map(1,k)) += value(Fratio(k)) ;
  }
- Fratio /= sumF;
+ for (k=1;k<=nfsh;k++)
+   Fratio(k) /= sumF(sel_map(1,k));
  // compute a 5-year recent average fishery-aggregated selectivity for output to projection model
  for (k=1;k<=nfsh;k++)
    for (j=1;j<=nages;j++)
@@ -4133,7 +4142,8 @@ FUNCTION write_proj
                  +value(sel_fsh(k,endyr-4,j))
                  )/5.;  
 
- newproj << mean(Fmort(endyr-4,endyr))<<endl;
+ for (s=1;s<=nstk;s++)
+   newproj << mean(Fmort(s,endyr-4,endyr))<<endl;
  newproj <<"#_Author_F_as_fraction_F_40%"<<endl;
  newproj <<"1"<<endl;
  newproj <<"#ABC SPR" <<endl;
@@ -4147,24 +4157,27 @@ FUNCTION write_proj
  newproj <<"#_F_ratio(must_sum_to_one_only_one_fishery)"<<endl;
  newproj <<"1"<<endl;
  newproj <<"#_Natural_Mortality" << aa << endl;
-   for (j=1;j<=nages;j++) newproj <<M(endyr)<<" "; newproj<<endl;
+   for (s=1;s<=nstk;s++) newproj <<M(s,endyr)<<" "; newproj<<endl;
  newproj <<"#_Maturity_divided_by_2(projection_program_uses_to_get_female_spawning_biomass_if_divide_by_2"<<aa<<endl<<2.*maturity<< endl;
  newproj <<"#_Wt_at_age_spawners"<<aa<<endl<<wt_pop<< endl;
- newproj <<"#_Wt_at_age_fishery" <<aa<<endl<<wt_fsh(1,endyr) << endl;
+ newproj <<"#_Wt_at_age_fishery" <<aa<<endl;
+   for (k=1;k<=nfsh;k++) newproj<<wt_fsh(k,endyr) << endl;
  newproj <<"#" <<endl;
 
  newproj <<"#_Selectivity_fishery_scaled_to_max_at_one"<<aa<<endl;
  seltmp = value(sel_fsh(1,endyr)) +value(sel_fsh(1,endyr-1))  +value(sel_fsh(1,endyr-2));  
  newproj << seltmp/max(seltmp)<<endl;
- newproj <<"#_Numbers_at_age_end_year"<<aa<<endl<<natage(endyr)<< endl;
+ newproj <<"#_Numbers_at_age_end_year"<<aa<<endl;
+   for (s=1;s<=nstk;s++) newproj <<natage(s,endyr)<< endl;
   if (styr<=1977)
   {
    newproj <<"#_N_recruitment_years (not including last estimate)"<<endl<<endyr-(1977+rec_age) << endl;
-   newproj <<"#_Recruitment_start_at_1977_yearclass=1978_for_age_1_recruits"<<yy(1977+rec_age,endyr-1)
-         <<endl<<mod_rec(1977+rec_age,endyr-1)<< endl;
+   newproj <<"#_Recruitment_start_at_1977_yearclass=1978_for_age_1_recruits"<<yy(1977+rec_age,endyr-1)<<endl;
+     for (s=1;s<=nstk;s++) newproj <<mod_rec(s)(1977+rec_age,endyr-1)<< endl;
   }
 
- newproj <<"#_Spawning biomass "<<endl<<Sp_Biom(styr-rec_age,endyr-rec_age)/1000<< endl;
+ newproj <<"#_Spawning biomass "<<endl<<;
+   for (s=1;s<=nstk;s++) newproj <<Sp_Biom(s)(styr-rec_age,endyr-rec_age)/1000<< endl;
  newproj.close();
  
 RUNTIME_SECTION
@@ -4353,18 +4366,18 @@ FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr,int i
   SBtmp  += Ntmp(nages)*wt_mature(istk,nages)*pow(srvtmp(nages),spmo_frac);
   return(SBtmp/phizero(cum_regs(istk)+yy_sr(istk,iyr)));
   
-FUNCTION dvariable spr_unfished(int i)
+FUNCTION dvariable spr_unfished(int istk,int i)
   dvariable Ntmp;
   dvariable SBtmp;
   SBtmp.initialize();
   Ntmp = 1.;
   for (j=1;j<nages;j++)
   {
-    SBtmp += Ntmp*wt_mature(j)*exp(-spmo_frac * M(i,j));
-    Ntmp  *= mfexp( -M(i,j));
+    SBtmp += Ntmp*wt_mature(istk,j)*exp(-spmo_frac * M(istk,i,j));
+    Ntmp  *= mfexp( -M(istk,i,j));
   }
-  Ntmp    /= (1.-exp(-M(i,nages)));
-  SBtmp += Ntmp*wt_mature(nages)*exp(-spmo_frac * M(i,nages));
+  Ntmp    /= (1.-exp(-M(istk,i,nages)));
+  SBtmp += Ntmp*wt_mature(istk,nages)*exp(-spmo_frac * M(istk,i,nages));
   return(SBtmp);
 
 FUNCTION compute_spr_rates
@@ -5323,7 +5336,7 @@ FUNCTION Write_R
         R_report   << endl;
         R_report << "$sdnr_length_ind_"<< (k) <<""<< endl;
         for (i=1;i<=nyrs_ind_length(k);i++) 
-          R_report << yrs_ind_length(k,i)<< " "<< sdnr( eac_ind(k,i),oac_ind(k,i),n_sample_ind_length(k,i)) << endl;
+          R_report << yrs_ind_length(k,i)<< " "<< sdnr( elc_ind(k,i),olc_ind(k,i),n_sample_ind_length(k,i)) << endl;
         R_report   << endl;
 
       } 
