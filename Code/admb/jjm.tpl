@@ -5857,18 +5857,18 @@ FUNCTION Write_R
       dvariable spr_mt_ft = spr_ratio(sumF(s),sel_tmp,i,s)  ;
       // Yr Fspr 1-Fspr F/Fmsy Fmsy F Fsprmsy MSY MSYL Bmsy Bzero B/Bmsy
       R_report<< i<<
-              " "<< spr_mt_ft                        <<
-              " "<< (1.-spr_mt_ft)                   << 
-              " "<< Fcur_Fmsy(s)                     <<
-              " "<< Fmsy(s)                          <<
-              " "<< sumF(s)                          <<
-              " "<< spr_ratio(Fmsy(s),sel_tmp,i,s)   <<
-              " "<< MSY(s)                           <<
-              " "<< MSYL(s)                          <<
-              " "<< Bmsy(s)                          <<
-              " "<< Bzero(cum_regs(s)+yy_sr(s,i))    <<
-              " "<< Sp_Biom(s,i)                     <<
-              " "<< Bcur_Bmsy(s)                     <<
+              " "<< spr_mt_ft                     <<
+              " "<< (1.-spr_mt_ft)                << 
+              " "<< Fcur_Fmsy(s)                  <<
+              " "<< Fmsy(s)                       <<
+              " "<< sumF(s)                       <<
+              " "<< spr_ratio(Fmsy(s),sel_tmp,i,s)<<
+              " "<< MSY(s)                        <<
+              " "<< MSYL(s)                       <<
+              " "<< Bmsy(s)                       <<
+              " "<< Bzero(cum_regs(s)+yy_sr(s,i)) <<
+              " "<< Sp_Biom(s,i)                  <<
+              " "<< Bcur_Bmsy(s)                  <<
               endl ;
     }
     for (r=1;r<=nreg(s);r++)
@@ -5879,46 +5879,48 @@ FUNCTION Write_R
     R_report<<"$msy_m0"<<endl; 
     sel_tmp.initialize();
     // NOTE Danger here
-  dvar3_array mtmp = M;
-  for (i=styr;i<=endyr;i++) 
-  { 
-    M(i) = M(styr);
-    sumF=0.;
-    for (k=1;k<=nfsh;k++)
-    {
-      Fratio(k) = sum(F(k,i)) ;
-      sumF += Fratio(k) ;
+    dvar3_array mtmp = M;
+    for (i=styr;i<=endyr;i++) 
+    { 
+      M(s,i) = M(s,styr);
+      sumF.initialize();
+      for (k=1;k<=nfsh;k++)
+      {
+        Fratio(k) = sum(F(k,i)) ;
+        sumF(sel_map(1,k)) += Fratio(k) ;
+      }
+      for (k=1;k<=nfsh;k++)
+        Fratio(k) /= sumF(sel_map(1,k));
+      for (k=1;k<=nfsh;k++)
+        if (sel_map(1,k) == s)
+          for (j=1;j<=nages;j++)
+            sel_tmp(j,k) = sel_fsh(k,i,j); 
+      get_msy(i);
+      sumF /= nages;
+      // important for time-varying natural mortality...
+      dvariable spr_mt_ft = spr_ratio(sumF(s),sel_tmp,i,s)  ;
+      dvariable spr_mt_f0 = spr_ratio(0.,sel_tmp,i,s)  ;
+      R_report<< i<<
+              " "<< spr_mt_ft                     <<
+              " "<< spr_mt_f0                     <<
+              " "<< (1.-spr_mt_f0)/(1-spr_mt_ft)  << 
+              " "<< Fcur_Fmsy(s)                  <<
+              " "<< Fmsy(s)                       <<
+              " "<< sumF(s)                       <<
+              " "<< spr_ratio(Fmsy(s),sel_tmp,i,s)<<
+              " "<< MSY(s)                        <<
+              " "<< Bmsy(s)                       <<
+              " "<< MSYL(s)                       <<
+              " "<< Bcur_Bmsy(s)                  <<
+              endl ;
     }
-    Fratio /= sumF;
-    for (k=1;k<=nfsh;k++)
-      for (j=1;j<=nages;j++)
-        sel_tmp(j,k) = sel_fsh(k,i,j); 
-    get_msy(i);
-    sumF /= nages;
-    // important for time-varying natural mortality...
-    dvariable spr_mt_ft = spr_ratio(sumF,sel_tmp,i)  ;
-    dvariable spr_mt_f0 = spr_ratio(0.,sel_tmp,i)  ;
-    R_report<< i<<
-            " "<< spr_mt_ft                   <<
-            " "<< spr_mt_f0                   <<
-            " "<< (1.-spr_mt_f0)/(1-spr_mt_ft)<< 
-            " "<< Fcur_Fmsy                   <<
-            " "<< Fmsy                        <<
-            " "<< sumF                        <<
-            " "<< spr_ratio(Fmsy,sel_tmp,i)   <<
-            " "<< MSY                         <<
-            " "<< Bmsy                        <<
-            " "<< MSYL                        <<
-            " "<< Bcur_Bmsy                   <<
-            endl ;
+
+    M = mtmp;
+    R_report<< "$F40_est"<<endl<<F40_est(s)<<endl;
+    R_report<< "$F35_est"<<endl<<F35_est(s)<<endl;
+
+    R_report.close();
   }
-
-  M = mtmp;
-  R_Report(F40_est);
-  R_Report(F35_est);
-
-  R_report.close();
-  }//FIN
 
 
 FUNCTION double mn_age(const dvector& pobs)
