@@ -1206,7 +1206,7 @@ DATA_SECTION
       ntmp(1) = 1.;
       for (int a=2;a<=nages;a++)
         ntmp(a) = ntmp(a-1)*exp(-natmortprior(mort_map(s,r))-.05);
-      btmp = wt_pop * ntmp;
+      btmp = wt_pop(s) * ntmp;
       write_input_log << "Mean Catch "<< "stock "<< s << "regime "<< r <<endl;
       int yy_shift_st_tmp;
       int yy_shift_end_tmp;
@@ -2259,8 +2259,8 @@ FUNCTION Calc_Dependent_Vars
       Sp_Biom_NoFish(s,i) = N_NoFsh(s,i)*elem_prod(pow(exp(-M(s,i)),spmo_frac) , wt_mature(s)); 
       Sp_Biom_NoFishRatio(s,i) = Sp_Biom(s,i) / Sp_Biom_NoFish(s,i) ;
       // cout <<spmo_frac<<endl;exit(1);
-      depletion         = totbiom(s,endyr)/totbiom(s,styr);
-      depletion_dyn     = totbiom(s,endyr)/totbiom_NoFish(s,endyr);
+      depletion(s)         = totbiom(s,endyr)/totbiom(s,styr);
+      depletion_dyn(s)     = totbiom(s,endyr)/totbiom_NoFish(s,endyr);
     }
     B100(s) = phizero(cum_regs(s)+yy_sr(s,styr)) * mean(recruits(s)(styr_rec_est(s,1),endyr_rec_est(s,nreg(s)))); //Ojo
     //dvar_vector Nnext(1,nages);
@@ -2994,7 +2994,7 @@ FUNCTION Future_projections
           // cout<<F_future(1,i)<<endl; cout<<F_future(2,i)<<endl; cout<<F_future(3,i)<<endl; cout<<F_future(4,i)<<endl; cout<<F(1,endyr)<<endl; cout<<F(2,endyr)<<endl; cout<<F(3,endyr)<<endl; cout<<F(4,endyr)<<endl; exit(1);
         }
         SSB_fut(s,iscen,i) = Sp_Biom_future(s,i);
-        switch (iscenario)
+        switch (iscen)
         {
           case 1:
             SSB_fut_1(s,i) = Sp_Biom_future(s,i);
@@ -3108,8 +3108,8 @@ FUNCTION void get_msy(int iyr)
   for (k=1;k<=nfsh;k++)
     Fratio(k) = sum(F(k,iyr)) / sumF(sel_map(1,k));
 
-  dvariable Stmp(1,nstk);
-  dvariable Rtmp(1,nstk);
+  dvar_vector Stmp(1,nstk);
+  dvar_vector Rtmp(1,nstk);
   double df=1.e-05;
   for (s=1;s<=nstk;s++)
   {
