@@ -3561,29 +3561,6 @@ FUNCTION Get_Bzero
   }
   // cout <<natagetmp<<endl;exit(1);
 
-FUNCTION dvariable Requil(dvariable& phi, int iyr)
-  RETURN_ARRAYS_INCREMENT();
-  dvariable RecTmp;
-  switch (SrType)
-  {
-    case 1:
-      RecTmp =  Bzero(yy_sr(iyr)) * (alpha(yy_sr(iyr)) + log(phi) - log(phizero(yy_sr(iyr))) ) / (alpha(yy_sr(iyr))*phi);
-      break;
-    case 2:
-      RecTmp =  (phi-alpha(yy_sr(iyr)))/(beta(yy_sr(iyr))*phi);
-      break;
-    case 3:
-      RecTmp =  mfexp(mean_log_rec(yy_sr(iyr)));
-      break;
-    case 4:
-      RecTmp =  (log(phi)+alpha(yy_sr(iyr))) / (beta(yy_sr(iyr))*phi); //RecTmp =  (log(phi)/alpha + 1.)*beta/phi;
-      break;
-  }
-  // Req    = Requil(phi) * exp(sigmarsq/2);
-  // return RecTmp* exp(sigmarsq/2);
-  RETURN_ARRAYS_DECREMENT();
-  return RecTmp;
-
 FUNCTION dvariable Requil(dvariable& phi, int iyr, int istk)
   RETURN_ARRAYS_INCREMENT();
   dvariable RecTmp;
@@ -3654,26 +3631,26 @@ REPORT_SECTION
     }
     if (!Popes)
       for (k=1;k<=nfsh;k++)
-        Ftot += F(k);
+        Ftot(sel_map(1,k)) += F(k);
     log_param(Mest);
     //log_param(mean_log_rec);
-    for (int i=1;i<=nreg;i++)
+    for (int r=1;r<=nregs;r++)
     {
-      log_param(mean_log_rec(i));
+      log_param(mean_log_rec(r));
     }
-    for (int i=1;i<=nreg;i++)
+    for (int r=1;r<=nregs;r++)
     {
-      log_param(steepness(i));
+      log_param(steepness(r));
     }
-    for (int i=1;i<=nreg;i++)
+    for (int r=1;r<=nregs;r++)
     {
-      log_param(log_Rzero(i));
+      log_param(log_Rzero(r));
     }
     //log_param(log_Rzero);
     log_param(rec_dev);
-    for (int i=1;i<=nreg;i++)
+    for (int r=1;r<=nregs;r++)
     {
-      log_param(log_sigmar(i));
+      log_param(log_sigmar(r));
     }
     log_param(fmort);
     // log_param(log_selcoffs_fsh);
@@ -3708,13 +3685,15 @@ REPORT_SECTION
     Fmort.initialize();
     for (k=1;k<=nfsh;k++)
       for (i=styr;i<=endyr;i++) 
-        Fmort(i) += mean(F(k,i));
+        Fmort(sel_map(1,k),i) += mean(F(k,i));
     report << Fmort<<endl;
     report << "Total mortality (Z)"<<endl;
-    report << Z<<endl;
+    for (s=1;s<=nstk;s++)
+      report << Z(s)<<endl;
     report << "Estimated numbers of fish " << endl;
-    for (i=styr;i<=endyr;i++) 
-      report <<"       Year: "<< i << " "<< natage(i) << endl;
+    for (s=1;s<=nstk;s++)
+      for (i=styr;i<=endyr;i++) 
+        report <<"       Year: "<< i << " "<< natage(s,i) << endl;
     report << endl<< "Estimated F mortality " << endl;
     for (k=1;k<=nfsh;k++)
     {
@@ -3729,13 +3708,14 @@ REPORT_SECTION
     for (k=1;k<=nind;k++)
     {
       int ii=1;
+      int istk=sel_map(1,k+nfsh);
       report <<endl<< "Yr_Obs_Pred_Survey "<< k <<" : "<< endl ;
       for (int iyr=styr;iyr<=endyr;iyr++)
       {
         dvariable pred_tmp ;
         if (ii<=nyrs_ind(k))
         {
-          pred_tmp = q_ind(k,ii) * pow(elem_prod(natage(iyr),pow(S(iyr),ind_month_frac(k))) * 
+          pred_tmp = q_ind(k,ii) * pow(elem_prod(natage(istk,iyr),pow(S(istk,iyr),ind_month_frac(k))) * 
                         elem_prod(sel_ind(k,iyr) , wt_ind(k,iyr)),q_power_ind(k));
           if (yrs_ind(k,ii)==iyr)
           {
@@ -3758,19 +3738,19 @@ REPORT_SECTION
       for (i=1;i<=nyrs_fsh_age(k);i++) 
         report << yrs_fsh_age(k,i)<< " "<< oac_fsh(k,i) << endl;
     }
-    report << endl<< "Predicted prop  " << endl;
-    for (k=1;k<=nfsh;k++)
-    {
-      report << "PredFishery "<< k <<" : "<< endl;
-      for (i=1;i<=nyrs_fsh_age(k);i++) 
-        report << yrs_fsh_age(k,i)<< " "<< eac_fsh(k,i) << endl;
-    }
     for (k=1;k<=nfsh;k++)
     {
       report << "Pobs_length_fishery_"<< (k) <<""<< endl;
       for (i=1;i<=nyrs_fsh_length(k);i++) 
         report << yrs_fsh_length(k,i)<< " "<< olc_fsh(k,i) << endl;
       report   << endl;
+    }
+    report << endl<< "Predicted prop  " << endl;
+    for (k=1;k<=nfsh;k++)
+    {
+      report << "PredFishery "<< k <<" : "<< endl;
+      for (i=1;i<=nyrs_fsh_age(k);i++) 
+        report << yrs_fsh_age(k,i)<< " "<< eac_fsh(k,i) << endl;
     }
     for (k=1;k<=nfsh;k++)
     {
@@ -3786,12 +3766,24 @@ REPORT_SECTION
       for (i=1;i<=nyrs_ind_age(k);i++) 
         report << yrs_ind_age(k,i)<< " "<< oac_ind(k,i) << endl;
     }
+    for (k=1;k<=nind;k++)
+    {
+      report << "Pobs_length_survey "<< (k) <<""<<  endl;
+      for (i=1;i<=nyrs_ind_length(k);i++) 
+        report << yrs_ind_length(k,i)<< " "<< olc_ind(k,i) << endl;
+    }
     report << endl<< "Predicted prop Survey" << endl;
     for (k=1;k<=nind;k++)
     {
       report << "PredSurvey "<<k<<" : "<<  endl;
       for (i=1;i<=nyrs_ind_age(k);i++) 
         report << yrs_ind_age(k,i)<< " "<< eac_ind(k,i) << endl;
+    }
+    for (k=1;k<=nind;k++)
+    {
+      report << "Pred_length_survey "<< (k) <<""<<  endl;
+      for (i=1;i<=nyrs_ind_length(k);i++) 
+        report << yrs_ind_length(k,i)<< " "<< elc_ind(k,i) << endl;
     }
     report << endl<< "Observed catch biomass " << endl;
     report << catch_bio << endl;
@@ -3820,23 +3812,24 @@ REPORT_SECTION
         report << "Survey  "<< k <<"  "<< i<<" "<<sel_ind(k,i) << endl;
 
     report << endl<< "Stock Recruitment stuff "<< endl;
-    for (i=styr_rec;i<=endyr;i++)
-      if (active(log_Rzero(yy_sr(i))))
-        report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< SRecruit(Sp_Biom(i-rec_age),yy_sr(i))<< " "<< mod_rec(i)<<endl;
-      else 
-        report << i<< " "<<Sp_Biom(i-rec_age)<< " "<< " 999" << " "<< mod_rec(i)<<endl;
+    for (s=1;s<=nstk;s++)
+      for (i=styr_rec;i<=endyr;i++)
+        if (active(log_Rzero(yy_sr(s,i))))
+          report << i<< " "<<Sp_Biom(s,i-rec_age)<< " "<< SRecruit(Sp_Biom(s,i-rec_age),cum_regs(s)+yy_sr(s,i))<< " "<< mod_rec(s,i)<<endl;
+        else 
+          report << i<< " "<<Sp_Biom(s,i-rec_age)<< " "<< " 999" << " "<< mod_rec(s,i)<<endl;
 
     report << endl<< "Curve to plot "<< endl;
     report <<"stock Recruitment"<<endl;
-    report <<"0 0 "<<endl;
-    for (j=1;j<=nreg;j++)
+    for (r=1;r<=nregs;r++)
     {
+      report <<"0 0 "<<endl;
       dvariable stock;
       for (i=1;i<=300;i++)
       {
         stock = double (i) * max(Bzero) /250.;
-        if (active(log_Rzero(j)))
-          report << stock <<" "<< SRecruit(stock, j)<<endl;
+        if (active(log_Rzero(r)))
+          report << stock <<" "<< SRecruit(stock, r)<<endl;
         else
           report << stock <<" 99 "<<endl;
       }
@@ -3844,7 +3837,7 @@ REPORT_SECTION
 
     report   << endl<<"Likelihood Components" <<endl;
     report   << "----------------------------------------- " <<endl;
-    report   << "  catch_like  age_like_fsh sel_like_fsh ind_like age_like_ind sel_like_ind rec_like fpen post_priors_indq post_priors residual total"<<endl;
+    report   << "  catch_like age_like_fsh length_like_fsh sel_like_fsh ind_like age_like_ind length_like_ind sel_like_ind rec_like fpen post_priors_indq post_priors residual total"<<endl;
     report   << " "<<obj_comps<<endl;
 
     obj_comps(13)= obj_fun - sum(obj_comps) ; // Residual 
@@ -3853,16 +3846,16 @@ REPORT_SECTION
              <<"  age_like_fsh     "<<setw(10)<<obj_comps(2) <<endl
              <<"  length_like_fsh  "<<setw(10)<<obj_comps(3) <<endl
              <<"  sel_like_fsh     "<<setw(10)<<obj_comps(4) <<endl
-             <<"  ind_like        "<<setw(10)<<obj_comps(5) <<endl
-             <<"  length_like_ind  "<<setw(10)<<obj_comps(6) <<endl
+             <<"  ind_like         "<<setw(10)<<obj_comps(5) <<endl
              <<"  age_like_ind     "<<setw(10)<<obj_comps(6) <<endl
-             <<"  sel_like_ind     "<<setw(10)<<obj_comps(7) <<endl
-             <<"  rec_like         "<<setw(10)<<obj_comps(8) <<endl
-             <<"  fpen             "<<setw(10)<<obj_comps(9) <<endl
-             <<"  post_priors_indq "<<setw(10)<<obj_comps(10) <<endl
-             <<"  post_priors      "<<setw(10)<<obj_comps(11)<<endl
-             <<"  residual         "<<setw(10)<<obj_comps(12)<<endl
-             <<"  total            "<<setw(10)<<obj_comps(13)<<endl;
+             <<"  length_like_ind  "<<setw(10)<<obj_comps(7) <<endl
+             <<"  sel_like_ind     "<<setw(10)<<obj_comps(8) <<endl
+             <<"  rec_like         "<<setw(10)<<obj_comps(9) <<endl
+             <<"  fpen             "<<setw(10)<<obj_comps(10)<<endl
+             <<"  post_priors_indq "<<setw(10)<<obj_comps(11)<<endl
+             <<"  post_priors      "<<setw(10)<<obj_comps(12)<<endl
+             <<"  residual         "<<setw(10)<<obj_comps(13)<<endl
+             <<"  total            "<<setw(10)<<obj_comps(14)<<endl;
 
     report   << endl;
     report   << "Fit to Catch Biomass "<<endl;
@@ -3905,12 +3898,12 @@ REPORT_SECTION
     report   << endl;
 
     report << setw(10)<< setfixed() << setprecision(5) <<endl;
-    report   << "Recruitment penalties: " <<rec_like<<endl;
+    report   << "Recruitment penalties: " <<endl<<rec_like<<endl;
     report   << "-------------------------" <<endl;
     report   << "  (sigmar)            " <<sigmar<<endl;
-    report   << "  S-R_Curve           " <<rec_like(1)<< endl;
-    report   << "  Regularity          " <<rec_like(2)<< endl;
-    report   << "  Future_Recruits     " <<rec_like(3)<< endl;
+    report   << "  S-R_Curve           " <<column(rec_like,1)<< endl;
+    report   << "  Regularity          " <<column(rec_like,2)<< endl;
+    report   << "  Future_Recruits     " <<column(rec_like,3)<< endl;
     report   << endl;
 
     report   << "F penalties:          " <<endl;
@@ -3945,17 +3938,17 @@ REPORT_SECTION
     // writerep(post_priors(1),repstring);
     // cout <<repstring<<endl;
     report   << "Natural_Mortality     "
-             << setw(10)<< post_priors(1)
+             << setw(10)<< column(post_priors,1)(1,nmort)
              << setw(10)<< M
              << setw(10)<< natmortprior
              << setw(10)<< cvnatmortprior <<endl;
     report   << "Steepness             "
-             << setw(10)<< post_priors(2)
+             << setw(10)<< column(post_priors,2)(1,nrec)
              << setw(10)<< steepness
              << setw(10)<< steepnessprior
              << setw(10)<< cvsteepnessprior <<endl;
     report   << "SigmaR                "
-             << setw(10)<< post_priors(3)
+             << setw(10)<< column(post_priors,3)(1,nrec)
              << setw(10)<< sigmar
              << setw(10)<< sigmarprior
              << setw(10)<< cvsigmarprior <<endl;
@@ -3976,8 +3969,8 @@ REPORT_SECTION
   report<<"sigmarprior,_CV,_phase: " <<sigmarprior<<" "<<  cvsigmarprior <<" "<<phase_sigmar<<endl;
 
   report<<"Rec_estimated_in_styr_endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
-  for (i=1;i<=nreg;i++)
-    report<<"SR_Curve_fit__in_styr_endyr_" <<i<<" : " <<styr_rec_est(i)<<" "<<endyr_rec_est(i)<<" "<<endl;
+  for (r=1;r<=nregs;r++)
+    report<<"SR_Curve_fit__in_styr_endyr_" <<r<<" : " <<styr_rec_est(r)<<" "<<endyr_rec_est(r)<<" "<<endl;
   report<<"Model_styr_endyr:            " <<styr        <<" "<<endyr        <<" "<<endl;
 
   report<<"M_prior,_CV,_phase "<< natmortprior<< " "<< cvnatmortprior<<" "<<phase_M<<endl;
@@ -4531,6 +4524,7 @@ FUNCTION Write_SimDatafile
   dmatrix catagetmp(styr,endyr,1,nages);
   dvector sim_catchbio(styr,endyr);
   double survtmp = value(mfexp(-natmort(styr)));
+  Ftot.initialize();// Ojo
   for (k=1;k<=nfsh;k++) Ftot += F(k);
 
   for (int isim=1;isim<=nsims;isim++)
@@ -5491,13 +5485,13 @@ FUNCTION Write_R
     R_report   <<obj_comps<<endl;
     R_report   << endl;
     R_report   << endl<<"$Like_Comp_names" <<endl;
-    R_report   <<"catch_like     "<<endl
+    R_report   <<"catch_like       "<<endl
              <<"age_like_fsh     "<<endl
-             <<"length_like_fsh     "<<endl
+             <<"length_like_fsh  "<<endl
              <<"sel_like_fsh     "<<endl
-             <<"ind_like        "<<endl
+             <<"ind_like         "<<endl
              <<"age_like_ind     "<<endl
-               <<"length_like_ind  "<<endl
+             <<"length_like_ind  "<<endl
              <<"sel_like_ind     "<<endl
              <<"rec_like         "<<endl
              <<"fpen             "<<endl
@@ -5661,7 +5655,7 @@ FUNCTION Write_R
     R_report <<"$Phase_survey_Sel_Coffs "<<endl;
     for (k=1;k<=nind;k++)
       if (sel_map(1,k+nfsh) == s)
-        R_report <<phase_selcoff_ind(k)<<" ";endl;
+        R_report <<phase_selcoff_ind(k)<<" "<<endl;
     R_report   << endl << endl;
     R_report <<"$Fshry_Selages " << endl;
     for (k=1;k<=nfsh;k++)
