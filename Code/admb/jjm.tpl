@@ -1689,7 +1689,7 @@ FUNCTION write_mceval
   Calc_Dependent_Vars();
   mceval<<
   q_ind(1,1)  << " "<< 
-  M(endyr,1)  << " "<< 
+  M(1,endyr,1)<< " "<< 
   steepness << " "<< 
   depletion << " "<< 
   MSY       << " "<< 
@@ -1707,10 +1707,10 @@ FUNCTION write_mceval
   SSB_fut(3,endyr_fut) << " "<< 
   SSB_fut(4,endyr_fut) << " "<< 
   SSB_fut(5,endyr_fut) << " "<< 
-  catch_future(1,styr_fut)    << " "<<  
-  catch_future(2,styr_fut)    << " "<<  
-  catch_future(3,styr_fut)    << " "<<  
-  catch_future(4,styr_fut)    << " "<<  endl;
+  catch_future(1,1,styr_fut)    << " "<<  
+  catch_future(1,2,styr_fut)    << " "<<  
+  catch_future(1,3,styr_fut)    << " "<<  
+  catch_future(1,4,styr_fut)    << " "<<  endl;
 //-----TRANSFORMATION FUNCION AGE->LENGTH--------------------------------------------------
 FUNCTION Get_Age2length
  // This subroutine allows convert an age composition to length composition. For example: if there is a matrix C(1,nyears,1,nages), 
@@ -4506,26 +4506,28 @@ FUNCTION Write_SimDatafile
   ofstream TruDB("truout.dat",ios::app); 
   // compute the autocorrelation term for residuals of fit to indices...
   // for (k=1;k<=nind;k++) ac(k) = get_AC(k);
-  int nyrs_fsh_age_sim=endyr-styr;
+  int nyrs_fsh_age_sim= 1+endyr-styr;
   int nyrs_ind_sim    = 1+endyr-styr;
   int nyrs_ind_age_sim= 1+endyr-styr;
   ivector yrs_fsh_age_sim(1,nyrs_fsh_age_sim);
   ivector yrs_ind_sim(1,nyrs_ind_sim);
-  ivector yrs_ind_age_sim(1,nyrs_ind_sim);
+  ivector yrs_ind_age_sim(1,nyrs_ind_age_sim);
   yrs_fsh_age_sim.fill_seqadd(1977,1);
   yrs_ind_sim.fill_seqadd(1977,1);
   yrs_ind_age_sim.fill_seqadd(1977,1);
   ivector n_sample_fsh_age_sim(1,nyrs_fsh_age_sim);
   ivector n_sample_ind_age_sim(1,nyrs_ind_age_sim);
   dvector new_ind_sim(1,nyrs_ind_sim);
-  dvector sim_rec_devs(styr_rec,endyr);
-  dvector sim_Sp_Biom(styr_rec,endyr);
-  dmatrix sim_natage(styr_rec,endyr,1,nages);
-  dmatrix catagetmp(styr,endyr,1,nages);
-  dvector sim_catchbio(styr,endyr);
-  double survtmp = value(mfexp(-natmort(styr)));
+  dmatrix sim_rec_devs(1,nstk,styr_rec,endyr);
+  dmatrix sim_Sp_Biom(1,nstk,styr_rec,endyr);
+  3darray sim_natage(1,nstk,styr_rec,endyr,1,nages);
+  3darray catagetmp(1,nstk,styr,endyr,1,nages);
+  dmatrix sim_catchbio(1,nstk,styr,endyr);
+  vector survtmp(1,nstk);
+  for (s=1;s<=nstk;s++)
+    survtmp(s) = value(mfexp(-natmort(s,styr)));
   Ftot.initialize();// Ojo
-  for (k=1;k<=nfsh;k++) Ftot += F(k);
+  for (k=1;k<=nfsh;k++) Ftot(sel_map(1,k)) += F(k);
 
   for (int isim=1;isim<=nsims;isim++)
   {
@@ -4535,39 +4537,47 @@ FUNCTION Write_SimDatafile
     // Simulate using new recruit series (same F's)
     // fill vector with unit normal RVs
     sim_rec_devs.fill_randn(rng);
-    sim_rec_devs *= value(sigmar(1));
-    sim_natage(styr_rec,1) = value(Rzero(1))*exp(sim_rec_devs(styr_rec));
-    for (j=2; j<=nages; j++)
-      sim_natage(styr_rec,j) = sim_natage(styr_rec,j-1) * survtmp;
-    sim_natage(styr_rec,nages) /= (1.-survtmp); 
+    for (s=1;s<=nstk;s++)
+      for (i=styr_rec;i<=endyr;i++)
+        sim_rec_devs(s,i) *= value(sigmar(cum_regs(s)+yy_sr(s,i)));
+    for (s=1;s<=nstk;s++)
+    {
+      sim_natage(s,styr_rec,1) = value(Rzero(cum_regs(s)+1))*exp(sim_rec_devs(s,styr_rec));
+      for (j=2; j<=nages; j++)
+        sim_natage(s,styr_rec,j) = sim_natage(s,styr_rec,j-1) * survtmp(s);
+      sim_natage(s,styr_rec,nages) /= (1.-survtmp(s));
+    }
   
     // Simulate population w/ process errors in recruits
-    for (i=styr_rec;i<=endyr;i++)
+    for (s=1;s<=nstk;s++)
     {
-      sim_Sp_Biom(i) = sim_natage(i)*pow(survtmp,spmo_frac) * wt_mature; 
-      if (i>styr_rec+rec_age)
-        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i-rec_age),yy_sr(i)))*mfexp(sim_rec_devs(i)); 
-      else
-        sim_natage(i,1)          = value(SRecruit(sim_Sp_Biom(i),yy_sr(i)))*mfexp(sim_rec_devs(i)); 
+      for (i=styr_rec;i<=endyr;i++)
+      {
+        sim_Sp_Biom(s,i) = sim_natage(s,i)*pow(survtmp,spmo_frac) * wt_mature(s); 
+        if (i>styr_rec+rec_age)
+          sim_natage(s,i,1)          = value(SRecruit(sim_Sp_Biom(s,i-rec_age),cum_regs(s)+yy_sr(s,i)))*mfexp(sim_rec_devs(s,i)); 
+        else
+          sim_natage(s,i,1)          = value(SRecruit(sim_Sp_Biom(s,i),cum_regs(s)+yy_sr(s,i)))*mfexp(sim_rec_devs(s,i)); 
   
-      if (i>=styr)
-      {
-        // apply estimated survival rates
-        sim_Sp_Biom(i)          = value( elem_prod(sim_natage(i),pow(S(i),spmo_frac)) * wt_mature); 
-        catagetmp(i)            = value( elem_prod(elem_div(Ftot(i),Z(i)),elem_prod(1.-S(i),sim_natage(i))));
-        sim_catchbio(i)         = catagetmp(i)*wt_fsh(1,i);
-        if (i<endyr)
+        if (i>=styr)
         {
-          sim_natage(i+1)(2,nages) = value( ++elem_prod(sim_natage(i)(1,nages-1),S(i)(1,nages-1)));
-          sim_natage(i+1,nages)   += value( sim_natage(i,nages)*S(i,nages));
+          // apply estimated survival rates
+          sim_Sp_Biom(s,i)          = value( elem_prod(sim_natage(s,i),pow(S(s,i),spmo_frac)) * wt_mature(s)); 
+          catagetmp(s,i)            = value( elem_prod(elem_div(Ftot(s,i),Z(s,i)),elem_prod(1.-S(s,i),sim_natage(s,i))));
+          sim_catchbio(s,i)         = catagetmp(s,i)*wt_fsh(1,i); //Ojo
+          if (i<endyr)
+          {
+            sim_natage(s,i+1)(2,nages) = value( ++elem_prod(sim_natage(s,i)(1,nages-1),S(s,i)(1,nages-1)));
+            sim_natage(s,i+1,nages)   += value( sim_natage(s,i,nages)*S(s,i,nages));
+          }
         }
-      }
-      else
-      {
-        if (i<endyr)
+        else
         {
-          sim_natage(i+1)(2,nages) = ++(sim_natage(i)(1,nages-1) * survtmp);
-          sim_natage(i+1,nages)   += sim_natage(i,nages)*survtmp;
+          if (i<endyr)
+          {
+            sim_natage(s,i+1)(2,nages) = ++(sim_natage(s,i)(1,nages-1) * survtmp);
+            sim_natage(s,i+1,nages)   += sim_natage(s,i,nages)*survtmp;
+          }
         }
       }
     }
@@ -4582,52 +4592,67 @@ FUNCTION Write_SimDatafile
     truth(Rzero);
     truth(Fmsy);
     truth(MSY);
-    dvector ntmp(1,nages);
+    dmatrix ntmp(1,nstk,1,nages);
     dmatrix seltmp(1,nfsh,1,nages);
     dmatrix Fatmp(1,nfsh,1,nages);
-    dvector Ztmp(1,nages);
+    dmatrix Ztmp(1,nstk,1,nages);
     seltmp.initialize();
     Fatmp.initialize();
     Ztmp.initialize();
     ntmp.initialize();
     for (k=1;k<=nfsh;k++)
-     seltmp(k) = value(sel_fsh(k,endyr));
-    Ztmp = value(natmort(styr));
+      seltmp(k) = value(sel_fsh(k,endyr));
+    for (s=1;s<=nstk;s++)
+      Ztmp(s) = value(natmort(s,styr));
     for (k=1;k<=nfsh;k++)
     { 
-      Fatmp(k) = value(Fratio(k) * Fmsy * seltmp(k));
-      Ztmp    += Fatmp(k);
+      Fatmp(k) = value(Fratio(k) * Fmsy(sel_map(1,k)) * seltmp(k));
+      Ztmp(sel_map(1,k))    += Fatmp(k);
     } 
-    dvector survmsy = exp(-Ztmp);
-    ntmp(1) = value(Rmsy);
-    for (j=2;j<=nages;j++) 
-      ntmp(j) = ntmp(j-1)*survmsy(j-1);
-    ntmp(nages) /= (1-survmsy(nages));
+    dmatrix survmsy = exp(-Ztmp);
+    for (s=1;s<=nstk;s++)
+    {
+      ntmp(s,1) = value(Rmsy(s));
+      for (j=2;j<=nages;j++) 
+        ntmp(s,j) = ntmp(s,j-1)*survmsy(s,j-1);
+      ntmp(s,nages) /= (1-survmsy(s,nages));
+    }
     // dvariable phi    = elem_prod( ntmp , pow(survmsy,spmo_frac ) )* wt_mature;
     truth(Rmsy);
     truth(seltmp);
-    double SurvBmsy;
-    double q_ind_sim=value(mean(q_ind(1)));
-    SurvBmsy = value(elem_prod(wt_ind(1,endyr),elem_prod(pow(survmsy,ind_month_frac(1)), ntmp)) * q_ind_sim*sel_ind(1,endyr)); 
+    dvector SurvBmsy(1,nstk);
+    double q_ind_sim=value(mean(q_ind(1))); //Ojo
+    for (s=1;s<=nstk;s++)
+      SurvBmsy(s) = value(elem_prod(wt_ind(1,endyr),elem_prod(pow(survmsy(s),ind_month_frac(1)), ntmp(s))) * q_ind_sim*sel_ind(1,endyr)); //Ojo
     truth(ntmp);
-    double Cmsy   = value(yield(Fratio,  Fmsy));
+    dvector Cmsy(1,nstk);
+    for (s=1;s<=nstk;s++)
+      Cmsy(s) = value(yield(Fratio, Fmsy(s), s));
     truth(Cmsy);
     // Now do OFL for next year...
-    ntmp(1)       = value(SRecruit(sim_Sp_Biom(endyr+1-rec_age),yy_sr(endyr+1)));
-    ntmp(2,nages) = value( ++elem_prod(sim_natage(endyr)(1,nages-1),S(endyr)(1,nages-1)));
-    ntmp(nages)  += value( sim_natage(endyr,nages)*S(endyr,nages));
+    for (s=1;s<=nstk;s++)
+    {
+      ntmp(s,1)        = value(SRecruit(sim_Sp_Biom(s,endyr+1-rec_age),cum_regs(s)+yy_sr(s,endyr+1)));
+      ntmp(s)(2,nages) = value( ++elem_prod(sim_natage(s,endyr)(1,nages-1),S(s,endyr)(1,nages-1)));
+      ntmp(s,nages)   += value( sim_natage(s,endyr,nages)*S(s,endyr,nages));
+    }
     dvector ctmp(1,nages);
     ctmp.initialize();
-    OFL=0.;
+    OFL.initialize();
     for (k=1;k<=nfsh;k++)
     {
       for ( j=1 ; j <= nages; j++ )
-        ctmp(j)      = ntmp(j) * Fatmp(k,j) * (1. - survmsy(j)) / Ztmp(j);
-      OFL  += wt_fsh(k,endyr) * ctmp;
+        ctmp(j)      = ntmp(sel_map(1,k),j) * Fatmp(k,j) * (1. - survmsy(sel_map(1,k),j)) / Ztmp(sel_map(1,k),j);
+      OFL(sel_map(1,k))  += wt_fsh(k,endyr) * ctmp;
     }
-    double NextSurv = value(elem_prod(wt_ind(1,endyr),elem_prod(pow(survmsy,ind_month_frac(1)), ntmp)) * 
-                        q_ind_sim*sel_ind(1,endyr)); 
-    double NextSSB  = elem_prod(ntmp, pow(survmsy,spmo_frac)) * wt_mature; 
+    dvector NextSurv(1,nstk);
+    dvector NextSSB(1,nstk);
+    for (s=1;s<=nstk;s++)
+    {
+      NextSurv(s) = value(elem_prod(wt_ind(1,endyr),elem_prod(pow(survmsy(s),ind_month_frac(1)), ntmp(s))) * 
+                   q_ind_sim*sel_ind(1,endyr)); //Ojo
+      NextSSB(s)  = elem_prod(ntmp(s), pow(survmsy(s),spmo_frac)) * wt_mature(s); 
+    }
     // Catch at following year for Fmsy
     truth(OFL);
     truth(SurvBmsy);
@@ -4645,14 +4670,17 @@ FUNCTION Write_SimDatafile
     simdat << rec_age <<endl;
     simdat << "# oldest age" <<endl;
     simdat << oldest_age <<endl;
+    simdat << "# Number of stocks " <<endl;
+    simdat << nstk <<endl;                                   
+    simdat << stknameread <<endl;
     simdat << "# Number of fisheries " <<endl;
     simdat << nfsh <<endl;                                   
     simdat << fshnameread <<endl;                                   
-    simdat << "# Catch biomass by fishery " <<endl;
-    for (k=1;k<=nfsh;k++)
+    simdat << "# Catch biomass by stock " <<endl;
+    for (s=1;s<=nstk;s++)
     {
-      simdat << "# " <<fshname(k) <<" " << k <<endl;
-      simdat << sim_catchbio <<endl;
+      simdat << "# " <<stkname(s) <<" " << s <<endl;
+      simdat << sim_catchbio(s) <<endl;
     }
     simdat << "# Catch biomass uncertainty by fishery (std errors)" <<endl;
     for (k=1;k<=nfsh;k++)
@@ -4692,7 +4720,7 @@ FUNCTION Write_SimDatafile
         // Add noise here
         freq.initialize();
         ivector bin(1,n_sample_fsh_age_sim(i));
-        p  = catagetmp(iyr);
+        p  = catagetmp(sel_map(1,k),iyr);
         p /= sum(p);
         bin.fill_multinomial(rng,p); // fill a vector v
         for (int j=1;j<=n_sample_fsh_age_sim(i);j++)
@@ -4703,7 +4731,7 @@ FUNCTION Write_SimDatafile
         // cout << p  <<endl;
         simdat << p  <<endl;
         // Compute total catch given this sample size for catch-age
-        Ctmp = sim_catchbio(iyr) / (p*wt_fsh(k,iyr)); 
+        Ctmp = sim_catchbio(sel_map(1,k),iyr) / (p*wt_fsh(k,iyr)); 
         // Simulated catage = proportion sampled
         // sim_catage(k,i) = p * Ctmp;
       }
@@ -4753,8 +4781,8 @@ FUNCTION Write_SimDatafile
       {
         int iyr=yrs_ind_sim(i);
         //uncorrelated...corr_dev(k,i) = ac(k) * corr_dev(k,i-1) + sqrt(1.-square(ac(k))) * corr_dev(k,i);
-        new_ind_sim(i) = mfexp(ind_devs(i) - ind_sigma/2.) * value(elem_prod(wt_ind(k,iyr),elem_prod(pow(S(iyr),ind_month_frac(k)), 
-                        sim_natage(iyr))) * q_ind_sim*sel_ind(k,iyr)); 
+        new_ind_sim(i) = mfexp(ind_devs(i) - ind_sigma/2.) * value(elem_prod(wt_ind(k,iyr),elem_prod(pow(S(sel_map(1,k+nfsh),iyr),ind_month_frac(k)), 
+                        sim_natage(sel_map(1,k+nfsh),iyr))) * q_ind_sim*sel_ind(k,iyr)); 
       }
       simdat << new_ind_sim     <<endl;
       dvector ExactSurvey = elem_div(new_ind_sim,exp(ind_devs-ind_sigma/2.));
@@ -4765,7 +4793,7 @@ FUNCTION Write_SimDatafile
     {
       simdat << "# " <<indname(k)<< " " << k <<endl;
       // simdat << new_ind_sim*mean(elem_div(obs_se_ind(k),obs_ind(k)))  <<endl;
-      simdat << new_ind_sim*ind_sigma  <<endl;
+      simdat << new_ind_sim*ind_sigma  <<endl; //Ojo
     }
     simdat << "# Number of years of age data available for index" <<endl;
     for (k=1;k<=nind;k++)
@@ -4799,7 +4827,7 @@ FUNCTION Write_SimDatafile
         freq.initialize();
         ivector bin(1,n_sample_ind_age_sim(i));
         // p = age_err * value(elem_prod( elem_prod(pow(S(iyr),ind_month_frac(k)), sim_natage(iyr))*q_ind_sim , sel_ind(k,iyr))); 
-        p = value(elem_prod( elem_prod(pow(S(iyr),ind_month_frac(k)), sim_natage(iyr))*q_ind_sim , sel_ind(k,iyr))); 
+        p = value(elem_prod( elem_prod(pow(S(sel_map(1,k+nfsh),iyr),ind_month_frac(k)), sim_natage(sel_map(1,k+nfsh),iyr))*q_ind_sim , sel_ind(k,iyr))); 
         p /= sum(p);
         // fill vector with multinomial samples
         bin.fill_multinomial(rng,p); // fill a vector v
@@ -4841,7 +4869,7 @@ FUNCTION Write_SimDatafile
       dvector avail_biom(styr,endyr);
       for (i=styr;i<=endyr;i++)
       {
-        avail_biom(i) = wt_fsh(k,i)*value(elem_prod(sim_natage(i),sel_fsh(k,i))); 
+        avail_biom(i) = wt_fsh(k,i)*value(elem_prod(sim_natage(sel_map(1,k),i),sel_fsh(k,i))); 
       }
       act_eff(k) = elem_prod(exp(ran_fsh_vect), (elem_div(catch_bio(k), avail_biom)) );
       // Normalize effort
@@ -4855,39 +4883,42 @@ FUNCTION Write_SimDatafile
       simdat << "# " <<fshname(k)<< " " << k <<endl;
       simdat << "Fishery Year "<<age_vector << endl;
       for (i=1;i<=nyrs_fsh_age(k);i++)
-        simdat<<fshname(k)<<" "<<yrs_fsh_age(k,i)<<" "<<catagetmp(yrs_fsh_age(k,i)) <<endl;
+        simdat<<fshname(k)<<" "<<yrs_fsh_age(k,i)<<" "<<catagetmp(sel_map(1,k),yrs_fsh_age(k,i)) <<endl;
     }
     // Write simple file by simulation
     dvector ExactSurvey = elem_div(new_ind_sim,exp(ind_devs-ind_sigma/2.));
-    for (i=styr;i<=endyr;i++)
+    for (s=1;s<=nstk;s++)
     {
-      SimDB<<model_name<<" "<<isim<<" "<< i<<" "<<
-        sim_catchbio(i)       <<" "<< 
-        new_ind_sim(i-styr+1) <<" "<< 
-        new_ind_sim(i-styr+1)*ind_sigma  <<endl;
-      TruDB<<model_name<<" " <<isim<<" "<< i<<" "<<
-        sim_catchbio(i)      <<" "<< 
-        sim_natage(i,1)      <<" "<< 
-        sim_Sp_Biom(i)       <<" "<< 
-        ExactSurvey(i-styr+1)<<" "<<
-        steepness            <<" "<< 
-        Bmsy                 <<" "<< 
-        MSYL                 <<" "<< 
-        MSY                  <<" "<< 
-        SurvBmsy             <<" "<<
-        endl;
+      for (i=styr;i<=endyr;i++)
+      {
+        SimDB<<model_name<<" "<<isim<<" "<< i<<" "<<
+          sim_catchbio(s,i)     <<" "<< 
+          new_ind_sim(i-styr+1) <<" "<< 
+          new_ind_sim(i-styr+1)*ind_sigma  <<endl;
+        TruDB<<model_name<<" " <<isim<<" "<< i<<" "<<
+          sim_catchbio(s,i)    <<" "<< 
+          sim_natage(s,i,1)    <<" "<< 
+          sim_Sp_Biom(s,i)     <<" "<< 
+          ExactSurvey(i-styr+1)<<" "<<
+          steepness(cum_regs(s)+yy_sr(s,i))<<" "<< 
+          Bmsy(s)              <<" "<< 
+          MSYL(s)              <<" "<< 
+          MSY(s)               <<" "<< 
+          SurvBmsy(s)          <<" "<<
+          endl;
+      }
+      TruDB<<model_name<<" "<<isim<<" "<< endyr+1<<" "<<
+          OFL(s)               <<" "<< 
+          SRecruit(sim_Sp_Biom(s,endyr+1-rec_age),cum_regs(s)+yy_sr(s,endyr+1))<<" "<<
+          sim_Sp_Biom(s,endyr) <<" "<< 
+          NextSurv             <<" "<< 
+          steepness(cum_regs(s)+yy_sr(s,i))<<" "<< 
+          Bmsy(s)              <<" "<< 
+          MSYL(s)              <<" "<< 
+          MSY(s)               <<" "<< 
+          SurvBmsy(s)          <<" "<<
+          endl;
     }
-    TruDB<<model_name<<" "<<isim<<" "<< endyr+1<<" "<<
-        OFL                  <<" "<< 
-        SRecruit(sim_Sp_Biom(endyr+1-rec_age),yy_sr(endyr+1))<<" "<<
-        sim_Sp_Biom(endyr)   <<" "<< 
-        NextSurv             <<" "<< 
-        steepness            <<" "<< 
-        Bmsy                 <<" "<< 
-        MSYL                 <<" "<< 
-        MSY                  <<" "<< 
-        SurvBmsy             <<" "<<
-        endl;
 
     trudat.close();
   }
