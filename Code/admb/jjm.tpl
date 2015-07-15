@@ -5997,8 +5997,8 @@ FUNCTION double get_AC(const int& indind)
   for (i=1;i<=i2;i++)
   {
     iyr = int(yrs_ind(indind,i));
-    cout<<iyr<<" "<<obs_ind(indind,i)<<" " <<pred_ind(indind,iyr)<<endl;
-    res(i) = log(obs_ind(indind,i)) - value(log(pred_ind(indind,iyr)));
+    cout<<iyr<<" "<<obs_ind(indind,i)<<" " <<pred_ind(indind,i)<<endl;
+    res(i) = log(obs_ind(indind,i)) - value(log(pred_ind(indind,i)));
   }
   double m1 = (mean(res(i1,i2-1)));
   double m2 = (mean(res(i1+1,i2))); 
