@@ -2757,17 +2757,20 @@ FUNCTION Oper_Model
 
   dvector ran_ind_vect(1,nind);
   ofstream SaveOM("Om_Out.dat",ios::app);
-  double C_tmp;
-  dvariable Fnow;
+  dvector C_tmp(1,nstk);
+  dvector Fnow(1,nstk);
   // system("cls"); cout<<"Number of replicates: "<<endl;
-  // Initialize recruitment in first year
-  for (i=styr_fut-rec_age;i<styr_fut;i++)
-    Sp_Biom_future(i) = Sp_Biom(i);
-  nage_future(styr_fut)(2,nages)              = ++elem_prod(natage(endyr)(1,nages-1),S(endyr)(1,nages-1));
-  nage_future(styr_fut,nages)                += natage(endyr,nages)*S(endyr,nages);
+  for (s=1;s<=nstk;s++)
+  {
+    // Initialize recruitment in first year
+    for (i=styr_fut-rec_age;i<styr_fut;i++)
+      Sp_Biom_future(s,i) = Sp_Biom(s,i);
+    nage_future(s,styr_fut)(2,nages)              = ++elem_prod(natage(s,endyr)(1,nages-1),S(s,endyr)(1,nages-1));
+    nage_future(s,styr_fut,nages)                += natage(s,endyr,nages)*S(s,endyr,nages);
 
-  // assume survival same as in last year...
-  Sp_Biom_future(styr_fut) = elem_prod(nage_future(styr_fut),pow(S(endyr),spmo_frac)) * wt_mature; 
+    // assume survival same as in last year...
+    Sp_Biom_future(s,styr_fut) = elem_prod(nage_future(s,styr_fut),pow(S(s,endyr),spmo_frac)) * wt_mature(s); 
+  }
   for (int isim=1;isim<=nsims;isim++)
   {
     cout<<isim<<" "<<cmp_no<<" "<<mc_count<<" "<<endl;
@@ -2782,9 +2785,9 @@ FUNCTION Oper_Model
       // for (k = 1 ; k<= nind ; k++) new_ind(k) = mfexp(ran_ind_vect(k)*.2)*value(nage_future(i)*q_ind(k,nyrs_ind(k))*sel_ind(k,endyr)); // use value function since converts to a double
       // new_ind(1) = mfexp(ran_ind_vect(1)*0.2)*value(sum(nage_future(i)*q_ind(1,nyrs_ind(1))));
       if(styr_fut==i)
-        new_ind(1) = mfexp(ran_ind_vect(1)*0.2)*value(wt_ind(1,endyr)*(natage(i-1)));
+        new_ind(1) = mfexp(ran_ind_vect(1)*0.2)*value(wt_ind(1,endyr)*(natage(1,i-1))); //Ojo
       else
-        new_ind(1) = mfexp(ran_ind_vect(1)*0.2)*value(wt_ind(1,endyr)*(nage_future(i-1)));
+        new_ind(1) = mfexp(ran_ind_vect(1)*0.2)*value(wt_ind(1,endyr)*(nage_future(1,i-1))); //Ojo
       // now for Selecting which MP to use
       // Append new indices observation to datafile
       ifstream tacin("ctac.dat");
@@ -2807,50 +2810,59 @@ FUNCTION Oper_Model
      //if (cmp_no==6) C_tmp=value((natmort(styr))*.75*mean(t_tmp(nobstmp-2,nobstmp)));
      if (cmp_no==5) 
      {
-       C_tmp = min(C_tmp*1.1,value((natmort(styr)*t_tmp(nobstmp))));
+       for (s=1;s<=nstk;s++)
+         C_tmp(s) = min(C_tmp(s)*1.1,value((natmort(s,styr)*t_tmp(nobstmp))));
        ofstream cnext("CatchNext.dat");
        cnext <<C_tmp<<endl;
        cnext.close();
      }
      if (cmp_no==6) 
      {
-       C_tmp = min(C_tmp*1.1,value(natmort(styr)*.75*t_tmp(nobstmp)));
+       for (s=1;s<=nstk;s++)
+         C_tmp(s) = min(C_tmp(s)*1.1,value(natmort(s,styr)*.75*t_tmp(nobstmp)));
        ofstream cnext("CatchNext.dat");
        cnext <<C_tmp<<endl;
        cnext.close();
      }
 
-     Fnow = SolveF2(endyr,nage_future(i), C_tmp);
+     for (s=1;s<=nstk;s++)
+       Fnow(s) = value(SolveF2(endyr,nage_future(s,i), C_tmp(s),s));
 
-      F_future(1,i) = sel_fsh(1,endyr) * Fnow;
-      //Z_future(i)   = F_future(1,i) + max(natmort);
-      Z_future(i)   = F_future(1,i) + mean(M);
-      S_future(i)   = mfexp(-Z_future(i));
-      nage_future(i,1)  = SRecruit( Sp_Biom_future(i-rec_age),yy_sr(i) ) * mfexp(rec_dev_future(i)) ;     
-      Sp_Biom_future(i) = wt_mature * elem_prod(nage_future(i),pow(S_future(i),spmo_frac)) ;
-      // Now graduate for the next year....
-      if (i<endyr_fut)
+      F_future(1,i) = sel_fsh(1,endyr) * Fnow; //Ojo
+      for (s=1;s<=nstk;s++)
       {
-        nage_future(i+1)(2,nages) = ++elem_prod(nage_future(i)(1,nages-1),S_future(i)(1,nages-1));
-        nage_future(i+1,nages)   += nage_future(i,nages)*S_future(i,nages);
+        //Z_future(i)   = F_future(1,i) + max(natmort);
+        Z_future(s,i)   = F_future(1,i) + mean(M(s));
+        S_future(s,i)   = mfexp(-Z_future(s,i));
+        nage_future(s,i,1)  = SRecruit( Sp_Biom_future(s,i-rec_age),cum_regs(s)+yy_sr(s,i) ) * mfexp(rec_dev_future(s,i)) ;     
+        Sp_Biom_future(s,i) = wt_mature(s) * elem_prod(nage_future(s,i),pow(S_future(s,i),spmo_frac)) ;
+        // Now graduate for the next year....
+        if (i<endyr_fut)
+        {
+          nage_future(s,i+1)(2,nages) = ++elem_prod(nage_future(s,i)(1,nages-1),S_future(s,i)(1,nages-1));
+          nage_future(s,i+1,nages)   += nage_future(s,i,nages)*S_future(s,i,nages);
+        }
+        catage_future(s,i) = 0.; 
+        for (k = 1 ; k<= nfsh ; k++)
+          if (sel_map(1,k) == s)
+            catage_future(s,i) += elem_prod(nage_future(s,i) , elem_prod(F_future(k,i) , elem_div( ( 1.- S_future(s,i) ) , Z_future(s,i))));
       }
-      catage_future(i) = 0.; 
-      for (k = 1 ; k<= nfsh ; k++)
-        catage_future(i) += elem_prod(nage_future(i) , elem_prod(F_future(k,i) , elem_div( ( 1.- S_future(i) ) , Z_future(i))));
   
-      SaveOM << model_name       <<
-        " "  << cmp_no           <<
-        " "  << mc_count         <<
-        " "  << isim             <<
-        " "  << i                <<
-        " "  << Fnow             <<
-        " "  << Fnow/Fmsy        <<
-        " "  << Sp_Biom_future(i-rec_age)                       <<
-        " "  << nage_future(i)                                  <<
-        " "  << catage_future(i)*wt_fsh(1,endyr)                <<
-        " "  << mean(M)                                   <<
-        " "  << t_tmp(nobstmp)                                  <<
-      endl;
+      for (s=1;s<=nstk;s++)
+        SaveOM << model_name       <<
+          " "  << cmp_no           <<
+          " "  << mc_count         <<
+          " "  << isim             <<
+          " "  << i                <<
+          " "  << s                <<
+          " "  << Fnow(s)          <<
+          " "  << Fnow(s)/Fmsy(s)  <<
+          " "  << Sp_Biom_future(s,i-rec_age)         <<
+          " "  << nage_future(s,i)                    <<
+          " "  << catage_future(s,i)*wt_fsh(1,endyr)  <<
+          " "  << mean(M(s))                          <<
+          " "  << t_tmp(nobstmp)                      <<
+        endl;
     }
   }
   // if (mc_count>5) exit(1);
