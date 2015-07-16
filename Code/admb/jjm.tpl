@@ -2301,43 +2301,6 @@ FUNCTION Calc_Dependent_Vars
       ctmp(j) = Nnext(sel_map(1,k),j) * Fatmp(k,j) * (1. - survmsy(sel_map(1,k),j)) / Ztmp(sel_map(1,k),j);
     OFL(sel_map(1,k)) += wt_fsh(k,endyr) * ctmp;
   }
-
-FUNCTION void Catch_at_Age(const int& i)
-  dvariable vbio=0.;
-  dvariable pentmp;
-  dvar_vector Nmid(1,nages);
-  dvar_vector Ctmp(1,nages);
-  catage_tot(i).initialize();
-  if (Popes)
-  {
-    Nmid = elem_prod(natage(i),mfexp(-M(i)/2) ); 
-  }
-  for (k=1;k<=nfsh;k++)
-  {
-    if (Popes)
-    {
-      pentmp=0.;
-      Ctmp = elem_prod(Nmid,sel_fsh(k,i));
-      vbio = Ctmp*wt_fsh(k,i);
-      //Kludge to go here...
-      // dvariable SK = posfun( (.98*vbio - catch_bio(k,i))/vbio , 0.1 , pentmp );
-      dvariable SK = posfun( (vbio - catch_bio(k,i))/vbio , 0.1 , pentmp );
-      catch_tmp    = vbio - SK*vbio; 
-      hrate        = catch_tmp / vbio;
-      fpen(4) += pentmp;
-      Ctmp *= hrate;                          
-      if (hrate>1) {cout << catch_tmp<<" "<<vbio<<endl;exit(1);}
-      catage_tot(i) += Ctmp;                      
-      catage(k,i)    = Ctmp;                      
-      if (last_phase())
-        pred_catch(k,i) = Ctmp*wt_fsh(k,i);
-    }
-    else
-    {
-      catage(k,i) = elem_prod(elem_div(F(k,i),Z(i)),elem_prod(1.-S(i),natage(i)));
-      pred_catch(k,i) = catage(k,i)*wt_fsh(k,i);
-    }
-  }
   
 FUNCTION void Catch_at_Age(const int& s, const int& i)
   dvariable vbio=0.;
@@ -4237,46 +4200,6 @@ GLOBALS_SECTION
   adstring repstring;
   adstring version_info;
 
-FUNCTION dvariable get_spr_rates(double spr_percent)
-  RETURN_ARRAYS_INCREMENT();
-  dvar_matrix sel_tmp(1,nages,1,nfsh);
-  sel_tmp.initialize();
-  for (k=1;k<=nfsh;k++)
-    for (j=1;j<=nages;j++)
-      sel_tmp(j,k) = sel_fsh(k,endyr,j); // NOTE uses last-year of fishery selectivity for projections.
-  dvariable sumF=0.;
-  for (k=1;k<=nfsh;k++)
-  {
-    Fratio(k) = sum(F(k,endyr)) ;
-    sumF += Fratio(k) ;
-  }
-  Fratio /= sumF;
-  double df=1.e-3;
-  dvariable F1 ;
-  F1.initialize();
-  F1 = .8*natmortprior;
-  dvariable F2;
-  dvariable F3;
-  dvariable yld1;
-  dvariable yld2;
-  dvariable yld3;
-  dvariable dyld;
-  dvariable dyldp;
-  // Newton Raphson stuff to go here
-  for (int ii=1;ii<=6;ii++)
-  {
-    F2     = F1 + df;
-    F3     = F1 - df;
-    yld1   = -1000*square(log(spr_percent/spr_ratio(F1, sel_tmp,styr)));
-    yld2   = -1000*square(log(spr_percent/spr_ratio(F2, sel_tmp,styr)));
-    yld3   = -1000*square(log(spr_percent/spr_ratio(F3, sel_tmp,styr)));
-    dyld   = (yld2 - yld3)/(2*df);                          // First derivative (to find the root of this)
-    dyldp  = (yld3-(2*yld1)+yld2)/(df*df);  // Newton-Raphson approximation for second derivitive
-    F1    -= dyld/dyldp;
-  }
-  RETURN_ARRAYS_DECREMENT();
-  return(F1);
-
 FUNCTION dvariable get_spr_rates(double spr_percent,int istk)
   RETURN_ARRAYS_INCREMENT();
   dvar_matrix sel_tmp(1,nages,1,nfsh);
@@ -4320,32 +4243,6 @@ FUNCTION dvariable get_spr_rates(double spr_percent,int istk)
   RETURN_ARRAYS_DECREMENT();
   return(F1);
   
-FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr)
-  dvariable SBtmp;
-  dvar_vector Ntmp(1,nages);
-  dvar_vector srvtmp(1,nages);
-  SBtmp.initialize();
-  Ntmp.initialize();
-  srvtmp.initialize();
-  dvar_matrix Ftmp(1,nages,1,nfsh); // note that this is in reverse order of usual indexing (age, fshery)
-  Ftmp = sel_tmp;
-  for (j=1;j<=nages;j++) 
-  {
-    Ftmp(j) = elem_prod(Ftmp(j), trial_F * Fratio);
-    srvtmp(j)  = mfexp(-sum(Ftmp(j)) - M(iyr,j));
-  }
-  Ntmp(1)=1.;
-  j=1;
-  SBtmp  += Ntmp(j)*wt_mature(j)*pow(srvtmp(j),spmo_frac);
-  for (j=2;j<nages;j++)
-  {
-    Ntmp(j) = Ntmp(j-1)*srvtmp(j-1);
-    SBtmp  += Ntmp(j)*wt_mature(j)*pow(srvtmp(j),spmo_frac);
-  }
-  Ntmp(nages)=Ntmp(nages-1)*srvtmp(nages-1)/(1.-srvtmp(nages));
-  SBtmp  += Ntmp(nages)*wt_mature(nages)*pow(srvtmp(nages),spmo_frac);
-  return(SBtmp/phizero(yy_sr(iyr)));
-
 FUNCTION dvariable spr_ratio(dvariable trial_F,dvar_matrix sel_tmp,int iyr,int istk)
   dvariable SBtmp;
   dvar_vector Ntmp(1,nages);
