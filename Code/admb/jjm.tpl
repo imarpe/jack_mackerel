@@ -2125,7 +2125,7 @@ FUNCTION Get_Numbers_at_Age
   {
     for (r=2; r<=nreg(s); r++)
     {
-      Bzero(cum_regs(s)+r) = Sp_Biom(reg_shift(s,i-1)-rec_age) ;  //reg_shift(s,i-1)-rec_age //(reg_shift(s,i-1)-nages)+1
+      Bzero(cum_regs(s)+r) = Sp_Biom(s)(reg_shift(s,r-1)-rec_age) ;  //reg_shift(s,i-1)-rec_age //(reg_shift(s,i-1)-nages)+1
     }
   }
   for (r=1; r<=nregs; r++)
@@ -2431,9 +2431,9 @@ FUNCTION Rec_Like
         for (r=1;r<=nreg(s);r++)
         {
           if (last_phase())
-            pred_rec(s)(yy_shift_st(s,r),yy_shift_end(s,r)) = SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
+            pred_rec(s)(yy_shift_st(s,r),yy_shift_end(s,r)) = SRecruit(Sp_Biom(s)(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
           else 
-            pred_rec(s)(yy_shift_st(s,r),yy_shift_end(s,r)) = .1+SRecruit(Sp_Biom(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
+            pred_rec(s)(yy_shift_st(s,r),yy_shift_end(s,r)) = .1+SRecruit(Sp_Biom(s)(yy_shift_st(s,r)-rec_age,yy_shift_end(s,r)-rec_age).shift(yy_shift_st(s,r))(yy_shift_st(s,r),yy_shift_end(s,r)),cum_regs(s)+r)(yy_shift_st(s,r),yy_shift_end(s,r));
         }
       }
 
@@ -4111,7 +4111,7 @@ FUNCTION write_proj
                  )/5.;  
 
  for (s=1;s<=nstk;s++)
-   newproj << mean(Fmort(s,endyr-4,endyr))<<endl;
+   newproj << mean(Fmort(s)(endyr-4,endyr))<<endl;
  newproj <<"#_Author_F_as_fraction_F_40%"<<endl;
  newproj <<"1"<<endl;
  newproj <<"#ABC SPR" <<endl;
@@ -4144,7 +4144,7 @@ FUNCTION write_proj
      for (s=1;s<=nstk;s++) newproj <<mod_rec(s)(1977+rec_age,endyr-1)<< endl;
   }
 
- newproj <<"#_Spawning biomass "<<endl<<;
+ newproj <<"#_Spawning biomass "<<endl;
    for (s=1;s<=nstk;s++) newproj <<Sp_Biom(s)(styr-rec_age,endyr-rec_age)/1000<< endl;
  newproj.close();
  
@@ -4440,10 +4440,10 @@ FUNCTION Write_SimDatafile
   dvector new_ind_sim(1,nyrs_ind_sim);
   dmatrix sim_rec_devs(1,nstk,styr_rec,endyr);
   dmatrix sim_Sp_Biom(1,nstk,styr_rec,endyr);
-  3darray sim_natage(1,nstk,styr_rec,endyr,1,nages);
-  3darray catagetmp(1,nstk,styr,endyr,1,nages);
+  d3_array sim_natage(1,nstk,styr_rec,endyr,1,nages);
+  d3_array catagetmp(1,nstk,styr,endyr,1,nages);
   dmatrix sim_catchbio(1,nstk,styr,endyr);
-  vector survtmp(1,nstk);
+  dvector survtmp(1,nstk);
   for (s=1;s<=nstk;s++)
     survtmp(s) = value(mfexp(-natmort(s,styr)));
   Ftot.initialize();// Ojo
@@ -4473,7 +4473,7 @@ FUNCTION Write_SimDatafile
     {
       for (i=styr_rec;i<=endyr;i++)
       {
-        sim_Sp_Biom(s,i) = sim_natage(s,i)*pow(survtmp,spmo_frac) * wt_mature(s); 
+        sim_Sp_Biom(s,i) = sim_natage(s,i)*pow(survtmp(s),spmo_frac) * wt_mature(s); 
         if (i>styr_rec+rec_age)
           sim_natage(s,i,1)          = value(SRecruit(sim_Sp_Biom(s,i-rec_age),cum_regs(s)+yy_sr(s,i)))*mfexp(sim_rec_devs(s,i)); 
         else
@@ -4495,8 +4495,8 @@ FUNCTION Write_SimDatafile
         {
           if (i<endyr)
           {
-            sim_natage(s,i+1)(2,nages) = ++(sim_natage(s,i)(1,nages-1) * survtmp);
-            sim_natage(s,i+1,nages)   += sim_natage(s,i,nages)*survtmp;
+            sim_natage(s,i+1)(2,nages) = ++(sim_natage(s,i)(1,nages-1) * survtmp(s));
+            sim_natage(s,i+1,nages)   += sim_natage(s,i,nages)*survtmp(s);
           }
         }
       }
@@ -4974,7 +4974,7 @@ FUNCTION Write_Datafile
       int iyr=yrs_ind(k,i);
       corr_dev(k)  = ran_ind_vect;
       new_ind(k,i) = mfexp(corr_dev(k,i) * obs_lse_ind(k,i) ) * 
-                     value(elem_prod(wt_ind(k,iyr),elem_prod(pow(S(iyr),ind_month_frac(k)), natage(iyr)))*
+                     value(elem_prod(wt_ind(k,iyr),elem_prod(pow(S(sel_map(1,k+nfsh),iyr),ind_month_frac(k)), natage(sel_map(1,k+nfsh),iyr)))*
                      q_ind(k,i)*sel_ind(k,iyr)); 
       // do next years correlated with previous
       for (i=2;i<=nyrs_ind(k);i++)
@@ -4982,8 +4982,8 @@ FUNCTION Write_Datafile
         iyr=yrs_ind(k,i);
         corr_dev(k,i) = ac(k) * corr_dev(k,i-1) + sqrt(1.-square(ac(k))) * corr_dev(k,i);
         new_ind(k,i) = mfexp(corr_dev(k,i) * obs_lse_ind(k,i) ) * 
-                        value(elem_prod(wt_ind(k,iyr),elem_prod(pow(S(iyr),ind_month_frac(k)), 
-                        natage(iyr))) * q_ind(k,i)*sel_ind(k,iyr)); 
+                        value(elem_prod(wt_ind(k,iyr),elem_prod(pow(S(sel_map(1,k+nfsh),iyr),ind_month_frac(k)), 
+                        natage(sel_map(1,k+nfsh),iyr))) * q_ind(k,i)*sel_ind(k,iyr)); 
       }
       simdat << new_ind(k)      <<endl;
     }
@@ -5023,7 +5023,7 @@ FUNCTION Write_Datafile
         // Add noise here
         freq.initialize();
         ivector bin(1,n_sample_ind_age(k,i));
-        p = age_err * value(elem_prod( elem_prod(pow(S(iyr),ind_month_frac(k)), natage(iyr))*q_ind(k,i) , sel_ind(k,iyr))); 
+        p = age_err * value(elem_prod( elem_prod(pow(S(sel_map(1,k+nfsh),iyr),ind_month_frac(k)), natage(sel_map(1,k+nfsh),iyr))*q_ind(k,i) , sel_ind(k,iyr))); 
         p /= sum(p);
         // fill vector with multinomial samples
         bin.fill_multinomial(rng,p); // fill a vector v
@@ -5065,7 +5065,7 @@ FUNCTION Write_Datafile
       dvector avail_biom(styr,endyr);
       for (i=styr;i<=endyr;i++)
       {
-        avail_biom(i) = wt_fsh(k,i)*value(elem_prod(natage(i),sel_fsh(k,i))); 
+        avail_biom(i) = wt_fsh(k,i)*value(elem_prod(natage(sel_map(1,k),i),sel_fsh(k,i))); 
       }
       act_eff(k) = elem_prod(exp(ran_fsh_vect), (elem_div(catch_bio(k), avail_biom)) );
       // Normalize effort
