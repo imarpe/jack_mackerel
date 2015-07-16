@@ -4987,7 +4987,7 @@ FUNCTION Write_Datafile
     }
     simdat << "# Observed age compositions for fishery" <<endl;
     for (k=1;k<=nfsh;k++)
-    {
+    { 
       dvector p(1,nages);
       double Ctmp; // total catch
       dvector freq(1,nages);
