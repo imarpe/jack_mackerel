@@ -4417,7 +4417,7 @@ FUNCTION void writerep(dvariable& tmp,adstring& tmpstring)
   cout <<tmpstring<<endl<<endl;
   tmpstring = printf("3.5%f",value(tmp));
 
-FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const double&  TACin)
+FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const double&  TACin, const int& istk)
   RETURN_ARRAYS_INCREMENT();
   dvariable dd = 10.;
   dvariable cc; 
@@ -4426,9 +4426,9 @@ FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const doubl
   dvar_vector Z_tmp(1,nages) ;
   dvar_vector S_tmp(1,nages) ;
   dvar_vector Ftottmp(1,nages);
-  dvariable btmp =  N_tmp * elem_prod(sel_fsh(1,iyr),wt_pop);
+  dvariable btmp =  N_tmp * elem_prod(sel_fsh(1,iyr),wt_pop(istk));
   dvariable ftmp;
-  M_tmp = M(iyr);
+  M_tmp = M(istk,iyr);
   ftmp = TACin/btmp;
     for (k=1;k<=nfsh;k++)
       Fratsel(k) = Fratio(k)*sel_fsh(k,iyr);
@@ -4436,13 +4436,15 @@ FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const doubl
     {
       Ftottmp.initialize();
       for (k=1;k<=nfsh;k++)
-        Ftottmp += ftmp*Fratsel(k);
+        if (sel_map(1,k) == istk)
+          Ftottmp += ftmp*Fratsel(k);
   
       Z_tmp = Ftottmp  + M_tmp; 
       S_tmp = mfexp( -Z_tmp );
       cc = 0.0;
       for (k=1;k<=nfsh;k++)
-        cc += wt_fsh(k,endyr) * elem_prod(elem_div(ftmp*Fratsel(k),  Z_tmp),elem_prod(1.-S_tmp,N_tmp)); // Catch equation (vectors)
+        if (sel_map(1,k) == istk)
+          cc += wt_fsh(k,endyr) * elem_prod(elem_div(ftmp*Fratsel(k),  Z_tmp),elem_prod(1.-S_tmp,N_tmp)); // Catch equation (vectors)
   
       dd = cc / TACin - 1.;
       if (dd<0.) dd *= -1.;
@@ -4451,7 +4453,7 @@ FUNCTION dvariable SolveF2(const int& iyr, const dvar_vector& N_tmp, const doubl
   RETURN_ARRAYS_DECREMENT();
   return(ftmp);
 
-FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
+FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch, const int& istk)
   // Returns vector of F's (given year) by fleet
   // Requires: N and fleet specific wts & selectivities at age, catch 
   // iterate to get Z's right
@@ -4461,7 +4463,7 @@ FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
   dvar_matrix  seltmp(1,nfsh,1,nages);
   dvar_matrix  wt_tmp(1,nfsh,1,nages);
   dvar_matrix Fratsel(1,nfsh,1,nages);
-  dvar_vector N_tmp = natage(iyr);
+  dvar_vector N_tmp = natage(istk,iyr);
   dvar_vector M_tmp(1,nages) ;
   dvar_vector Z_tmp(1,nages) ;
   dvar_vector S_tmp(1,nages) ;
@@ -4471,7 +4473,7 @@ FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
   dvar_vector ftmp(1,nfsh);
   dvar_vector hrate(1,nfsh);
   btmp.initialize(); 
-  M_tmp = M(iyr);
+  M_tmp = M(istk,iyr);
   // Initial guess for Fratio
   for (k=1;k<=nfsh;k++)
   {
@@ -4487,21 +4489,30 @@ FUNCTION dvar_vector SolveF2(const int& iyr, const dvector&  Catch)
   // iterate to balance effect of multiple fisheries...........
   for (int kk=1;kk<=nfsh;kk++) 
   {
-    for (k=1;k<=nfsh;k++)
+    if (sel_map(1,kk) == istk)
     {
-      if (hrate(k) <.9999) 
+      for (k=1;k<=nfsh;k++)
       {
-        for (int ii=1;ii<=8;ii++)
+        if (sel_map(1,k) == istk)
         {
-          Ftottmp.initialize();
-          Ftottmp   = ftmp*Fratsel;
-          Z_tmp     = Ftottmp  + M_tmp; 
-          S_tmp     = mfexp( -Z_tmp );
-          cc        = wt_tmp(k) * elem_prod(elem_div(ftmp(k)*Fratsel(k),  Z_tmp),elem_prod(1.-S_tmp,N_tmp)); // Catch equation (vectors)
-          ftmp(k)  += ( Catch(k)-cc ) / btmp(k);
+          if (hrate(k) <.9999) 
+          {
+            for (int ii=1;ii<=8;ii++)
+            {
+              Ftottmp.initialize();
+              for (int aaa=1;aaa<=nages;aaa++)
+                 for (int kkk=1;kkk<=nfsh;kkk++)
+                   if (sel_map(1,kkk) == istk)
+                     Ftottmp(aaa)   += ftmp(kkk)*Fratsel(kkk,aaa);
+              Z_tmp     = Ftottmp  + M_tmp; 
+              S_tmp     = mfexp( -Z_tmp );
+              cc        = wt_tmp(k) * elem_prod(elem_div(ftmp(k)*Fratsel(k),  Z_tmp),elem_prod(1.-S_tmp,N_tmp)); // Catch equation (vectors)
+              ftmp(k)  += ( Catch(k)-cc ) / btmp(k);
+            }
+            Frat(k)    = ftmp(k)/sum(ftmp);
+            Fratsel(k) = Frat(k)*seltmp(k);
+          }
         }
-        Frat(k)    = ftmp(k)/sum(ftmp);
-        Fratsel(k) = Frat(k)*seltmp(k);
       }
     }
   }
