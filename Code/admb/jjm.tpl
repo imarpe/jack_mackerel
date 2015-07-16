@@ -356,7 +356,7 @@ DATA_SECTION
   !! nregs = sum(nreg);
   vector cum_regs(1,nstk)
   !! cum_regs.initialize();
-  matrix stk_reg_map(2,nregs)
+  matrix stk_reg_map(1,2,1,nregs)
  LOCAL_CALCS
   //cum_regs(1) = 0;
   for (s=2;s<=nstk;s++)
@@ -1123,7 +1123,7 @@ DATA_SECTION
     }
     write_input_log<<"#  SSB estimated in styr endyr: " <<styr_sp    <<" "<<endyr_sp      <<" "<<endl;
     write_input_log<<"#  Rec estimated in styr endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
-    write_input_log<<"#  SR Curve fit  in styr endyr: " <<styr_rec_est<<" "<<endyr_rec_est<<" "<<endl;
+    write_input_log<<"#  SR Curve fit  in styr endyr: " <<styr_rec_est<<endl<<" "<<endyr_rec_est<<" "<<endl;
     write_input_log<<"#             Model styr endyr: " <<styr        <<" "<<endyr        <<" "<<endl;
     log_qprior = log(qprior);
     log_input(qprior);
@@ -1237,10 +1237,10 @@ DATA_SECTION
 
 PARAMETER_SECTION
  // Biological Parameters
-  init_bounded_vector Mest(1,nmort,.02,4.8,phase_M)
-  init_bounded_matrix Mage_offset(1,nmort,1,npars_Mage,-3,3,phase_Mage)
+  init_bounded_number_vector Mest(1,nmort,.02,4.8,phase_M)
+  init_bounded_vector_vector Mage_offset(1,nmort,1,npars_Mage,-3,3,phase_Mage)
   matrix Mage(1,nmort,1,nages)
-  init_bounded_matrix M_rw(1,nstk,1,npars_rw_M,-10,10,phase_rw_M)
+  init_bounded_vector_vector M_rw(1,nstk,1,npars_rw_M,-10,10,phase_rw_M)
   matrix natmort(1,nstk,styr,endyr)
   3darray natage(1,nstk,styr,endyr+1,1,nages)
   3darray N_NoFsh(1,nstk,styr,endyr_fut,1,nages);
@@ -1253,10 +1253,10 @@ PARAMETER_SECTION
 
 
  //-----GROWTH PARAMETERS--------------------------------------------------
-  init_vector log_Linf(1,ngrowth,phase_Linf);
-  init_vector log_k(1,ngrowth,phase_k);
-  init_vector log_Lo(1,ngrowth,phase_Lo);
-  init_vector log_sdage(1,ngrowth,phase_sdage);
+  init_number_vector log_Linf(1,ngrowth,phase_Linf);
+  init_number_vector log_k(1,ngrowth,phase_k);
+  init_number_vector log_Lo(1,ngrowth,phase_Lo);
+  init_number_vector log_sdage(1,ngrowth,phase_sdage);
 //---------------------------------------------------------------------------
 
 
@@ -1631,7 +1631,7 @@ PROCEDURE_SECTION
   }
 
   // Main model calcs---------------------
-  if(active(log_Linf)||active(log_k)||active(log_sdage))
+  if(active(log_Linf(1))||active(log_k(1))||active(log_sdage(1))) //Ojo
     Get_Age2length();
   Get_Selectivity();
   Get_Mortality();
@@ -2001,7 +2001,7 @@ FUNCTION Get_NatMortality
         natmort(s,i) = Mest(mort_map(s,r));
         M(s,i) = Mest(mort_map(s,r));
         // Age varying part
-        if (npars_Mage(mort_map(s,r))>0 && (active(Mest) || active(Mage_offset)))
+        if (npars_Mage(mort_map(s,r))>0 && (active(Mest(mort_map(s,r))) || active(Mage_offset(mort_map(s,r)))))
         {
           int jj=1;
           for (j=1;j<=nages;j++)
@@ -2024,9 +2024,9 @@ FUNCTION Get_NatMortality
       }
       else
       {
-        natmort(s,i) = Mest(mort_map(s,r-1));
+        natmort(s,i) = Mest(mort_map(s,yy_sr(s,i)));
         // Time varying part
-        if (npars_rw_M(s)>0 && active(M_rw))
+        if (npars_rw_M(s)>0 && active(M_rw(s)))
         {
           int ii=1;
           if (i==yrs_rw_M(s,ii))
@@ -2056,7 +2056,7 @@ FUNCTION Get_Mortality2
 
 FUNCTION Get_Mortality
   Get_NatMortality();
-  Z = M; 
+  Z = M;
   if (!Popes)
   {
     Fmort.initialize();
@@ -2541,16 +2541,16 @@ FUNCTION Compute_priors
      //  -q_power_prior(k))/(2*cvq_power_prior(k)*cvq_power_prior(k)); 
   }
 
-  if (active(Mest))
-    for (r=1;r<=nmort;r++)
+  for (r=1;r<=nmort;r++)
+    if (active(Mest(r)))
       post_priors(r,1) += square(log(Mest(r)/natmortprior(r)))/(2.*cvnatmortprior(r)*cvnatmortprior(r)); 
 
-  if (active(Mage_offset))  
-    for (r=1;r<=nmort;r++)
+  for (r=1;r<=nmort;r++)
+    if (active(Mage_offset(r)))
       post_priors(r,1) += norm2(Mage_offset(r))/(2.*cvnatmortprior(r)*cvnatmortprior(r)); 
 
-  if (active(M_rw))
-    for (s=1;s<=nstk;s++)
+  for (s=1;s<=nstk;s++)
+    if (active(M_rw(s)))
       for (int i=1;i<=npars_rw_M(s);i++)
         post_priors(r,1) +=  square(M_rw(s,i))/ (2.*sigma_rw_M(s,i)*sigma_rw_M(s,i)) ;
 
@@ -2566,20 +2566,20 @@ FUNCTION Compute_priors
       post_priors(r,3) += square(log(sigmar(r)/sigmarprior(r)))/(2*cvsigmarprior(r)*cvsigmarprior(r)); 
   }
 //--------------------------NEW------------------------------------
-  if (active(log_Linf))
-    for (int r=1;r<=ngrowth;r++)
+  for (int r=1;r<=ngrowth;r++)
+    if (active(log_Linf(r)))  
       post_priors(r,4) += square(log_Linf(r)-log_Linfprior(r))/(2*cvLinfprior(r)*cvLinfprior(r)); 
 
-  if (active(log_k))
-    for (int r=1;r<=ngrowth;r++)
+  for (int r=1;r<=ngrowth;r++)
+    if (active(log_k(r)))
       post_priors(r,5) += square(log_k(r)-log_kprior(r))/(2*cvkprior(r)*cvkprior(r)); 
 
-  if (active(log_Lo))
-    for (int r=1;r<=ngrowth;r++)
+  for (int r=1;r<=ngrowth;r++)
+    if (active(log_Lo(r)))
       post_priors(r,6) += square(log_Lo(r)-log_Loprior(r))/(2*cvLoprior(r)*cvLoprior(r)); 
 
-  if (active(log_sdage))
-    for (int r=1;r<=ngrowth;r++)
+  for (int r=1;r<=ngrowth;r++)
+    if (active(log_sdage(r)))
       post_priors(r,7) += square(log_sdage(r)-log_sdageprior(r))/(2*cvsdageprior(r)*cvsdageprior(r)); 
 FUNCTION Fmort_Pen
   // Phases less than 3, penalize High F's---------------------------------
@@ -3607,7 +3607,10 @@ REPORT_SECTION
     if (!Popes)
       for (k=1;k<=nfsh;k++)
         Ftot(sel_map(1,k)) += F(k);
-    log_param(Mest);
+    for (int r=1;r<=nmort;r++)
+    {
+      log_param(Mest(r));
+    }
     //log_param(mean_log_rec);
     for (int r=1;r<=nregs;r++)
     {
@@ -3789,7 +3792,7 @@ REPORT_SECTION
     report << endl<< "Stock Recruitment stuff "<< endl;
     for (s=1;s<=nstk;s++)
       for (i=styr_rec;i<=endyr;i++)
-        if (active(log_Rzero(yy_sr(s,i))))
+        if (active(log_Rzero(cum_regs(s)+yy_sr(s,i))))
           report << i<< " "<<Sp_Biom(s,i-rec_age)<< " "<< SRecruit(Sp_Biom(s,i-rec_age),cum_regs(s)+yy_sr(s,i))<< " "<< mod_rec(s,i)<<endl;
         else 
           report << i<< " "<<Sp_Biom(s,i-rec_age)<< " "<< " 999" << " "<< mod_rec(s,i)<<endl;
