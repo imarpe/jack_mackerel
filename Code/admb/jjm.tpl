@@ -3087,11 +3087,11 @@ FUNCTION void get_msy(int iyr)
   dvar_vector Stmp(1,nstk);
   dvar_vector Rtmp(1,nstk);
   double df=1.e-05;
-  for (s=1;s<=nstk;s++)
+  for (int istk=1;istk<=nstk;istk++)
   {
     dvariable F1;
     F1.initialize();
-    F1 = (0.8*natmortprior(mort_map(s,1))); //Ojo First year //nreg(s) //yy_sr(s,iyr)
+    F1 = (0.8*natmortprior(mort_map(istk,1))); //Ojo First year //nreg(s) //yy_sr(s,iyr)
     dvariable F2;
     dvariable F3;
     dvariable yld1;
@@ -3113,9 +3113,9 @@ FUNCTION void get_msy(int iyr)
       F2     = F1 + df*.5;
       F3     = F2 - df;
       // yld1   = yield(Fratio,F1, Stmp,Rtmp); // yld2   = yield(Fratio,F2,Stmp,Rtmp); // yld3   = yield(Fratio,F3,Stmp,Rtmp);
-      yld1   = yield(Fratio,F1,s,iyr);
-      yld2   = yield(Fratio,F2,s,iyr);
-      yld3   = yield(Fratio,F3,s,iyr);
+      yld1   = yield(Fratio,F1,istk,iyr);
+      yld2   = yield(Fratio,F2,istk,iyr);
+      yld3   = yield(Fratio,F3,istk,iyr);
       dyld   = (yld2 - yld3)/df;                          // First derivative (to find the root of this)
       dyldp  = (yld2 + yld3 - 2.*yld1)/(.25*df*df);   // Second derivative (for Newton Raphson)
       if (breakout==0)
@@ -3132,22 +3132,22 @@ FUNCTION void get_msy(int iyr)
     }
     {
       dvar_vector ttt(1,5);
-      ttt         = yld(Fratio,F1,s,iyr);
-      Fmsy(s)     = F1;
-      Rtmp(s)     = ttt(3);
-      MSY(s)      = ttt(2);
-      Bmsy(s)     = ttt(1);
-      MSYL(s)     = ttt(1)/Bzero(cum_regs(s)+yy_sr(s,iyr));
-      lnFmsy(s)   = log(MSY(s)/ttt(5)); // Exploitation fraction relative to total biomass
-      Bcur_Bmsy(s)= Sp_Biom(s,iyr)/Bmsy(s);
+      ttt            = yld(Fratio,F1,istk,iyr);
+      Fmsy(istk)     = F1;
+      Rtmp(istk)     = ttt(3);
+      MSY(istk)      = ttt(2);
+      Bmsy(istk)     = ttt(1);
+      MSYL(istk)     = ttt(1)/Bzero(cum_regs(istk)+yy_sr(istk,iyr));
+      lnFmsy(istk)   = log(MSY(istk)/ttt(5)); // Exploitation fraction relative to total biomass
+      Bcur_Bmsy(istk)= Sp_Biom(istk,iyr)/Bmsy(istk);
 
       dvariable FFtmp;
       FFtmp.initialize();
       for (k=1;k<=nfsh;k++)
-        if (sel_map(1,k) == s)
+        if (sel_map(1,k) == istk)
           FFtmp += mean(F(k,iyr));
-      Fcur_Fmsy(s)= FFtmp/Fmsy(s);
-      Rmsy(s)     = Rtmp(s);
+      Fcur_Fmsy(istk)= FFtmp/Fmsy(istk);
+      Rmsy(istk)     = Rtmp(istk);
     }
   }
 
