@@ -4,7 +4,7 @@ Model_1-ms
 #Fsh 1 Fsh_2 Fsh_3 Fsh_4 Srv_1 Srv_2 Srv_3 Srv_4 Srv_5 Srv_6 Srv_7 Srv_8  
 #N_Chile_Fshry CS_Chile_Fishery Peruvian International Chile_AcousCS Chile_AcousN Chilean_CPUE DEPM Acoustic_Peru Peru_CPUE Chinese_CPUE EU_CPUE #  
 # 2 3 4 1 2 3 4 5 6 7 8 9  
-2 2 1 2 2 2 2 2 1 1 2 2 2
+1 1 2 1 1 1 1 1 2 2 1 1 1
 1 1 1 1 2 1 1 2 1 1 1 1 1  
 1 2 3 4 1 1 2 4 3 3 4 4 4  
 #Number of regimes (by stock)
