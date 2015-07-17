@@ -1119,7 +1119,7 @@ DATA_SECTION
     log_input(sigmarprior);
     for (s=1;s<=nstk;s++)
     {
-      nrecs_est_shift(s,nreg(s)) = endyr_rec_est(s,nreg(s))+styr_rec_est(s,nreg(s))+1;
+      nrecs_est_shift(cum_regs(s)+nreg(s)) = endyr_rec_est(s,nreg(s))-styr_rec_est(s,nreg(s))+1;
     }
     write_input_log<<"#  SSB estimated in styr endyr: " <<styr_sp    <<" "<<endyr_sp      <<" "<<endl;
     write_input_log<<"#  Rec estimated in styr endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
@@ -2488,7 +2488,7 @@ FUNCTION Rec_Like
         for (r=1;r<=nreg(s);r++)
         {
           int iregs = cum_regs(s)+r;
-          for (j=1;j<=(nrecs_est_shift(r)-1);j++)
+          for (j=1;j<=(nrecs_est_shift(iregs)-1);j++)
           {
             if ((yr_rec_est(iregs,j+1)-yr_rec_est(iregs,j)) > 1)
               rec_like(s,4) += .5*norm2( rec_dev(s)(yr_rec_est(iregs,j)+1,yr_rec_est(iregs,j+1)-1) )/sigmarsq(iregs) + ((yr_rec_est(iregs,j+1)-1)-(yr_rec_est(iregs,j)+1))*log(sigmar(iregs)) ;
@@ -2503,7 +2503,7 @@ FUNCTION Rec_Like
         int istk = stk_reg_map(1,r);
         for (j=1;j<=nrecs_est_shift(r);j++)
         {
-          rec_like(istk,2) += square(rec_dev(stk_reg_map(1,r))(yr_rec_est(r,j)));
+          rec_like(istk,2) += square(rec_dev(istk,yr_rec_est(r,j)));
         }
       }
     }
@@ -2833,7 +2833,7 @@ FUNCTION Oper_Model
   if (!mceval_phase())
     exit(1);
 
-FUNCTION void get_future_Fs(const int& i,const int& iscenario)
+FUNCTION void get_future_Fs(const int& s,const int& i,const int& iscenario)
     f_tmp.initialize();
     dvar_matrix F_fut_tmp(1,nfsh,1,nages);
     dvar_vector Ftot2013(1,nages);
@@ -2888,16 +2888,17 @@ FUNCTION void get_future_Fs(const int& i,const int& iscenario)
         F_fut_tmp = 0.0;
         break;
     }
-    for (s=1;s<=nstk;s++)
-      Z_future(s,i) = M(s,endyr);
+    Z_future(s,i) = M(s,endyr);
     for (k=1;k<=nfsh;k++)
     {
-      // F_future(k,i) = sel_fsh(k,endyr) * F_fut_tmp(k);
-      F_future(k,i) = F_fut_tmp(k);
-      Z_future(sel_map(1,k),i)  += F_future(k,i);
+      if (sel_map(1,k) == s)
+      {
+        // F_future(k,i) = sel_fsh(k,endyr) * F_fut_tmp(k);
+        F_future(k,i) = F_fut_tmp(k);
+        Z_future(s,i)  += F_future(k,i);
+      }
     }
-    for (s=1;s<=nstk;s++)
-      S_future(s,i) = mfexp(-Z_future(s,i));
+    S_future(s,i) = mfexp(-Z_future(s,i));
 
 FUNCTION Future_projections
   // Need to check on treatment of Fratio--whether it should be included or not
@@ -2919,20 +2920,20 @@ FUNCTION Future_projections
 
       // cout<<Sp_Biom(s)(endyr-10,endyr)<<endl<<Sp_Biom_future(s)<<endl;exit(1);
       nage_future(s,styr_fut)(2,nages) = ++elem_prod(natage(s,endyr)(1,nages-1),S(s,endyr)(1,nages-1));
-      nage_future(s)(styr_fut,nages)  += natage(s,endyr,nages)*S(s,endyr,nages);
+      nage_future(s,styr_fut,nages)  += natage(s,endyr,nages)*S(s,endyr,nages);
       Sp_Biom_future(s,styr_fut)       = wt_mature(s) * elem_prod(nage_future(s,styr_fut),pow(S_future(s,styr_fut),spmo_frac)) ;
       // Future Recruitment (and Sp_Biom)
       for (i=styr_fut;i<endyr_fut;i++)
       {
         nage_future(s,i,1)  = SRecruit( Sp_Biom_future(s,i-rec_age),cum_regs(s)+yy_sr(s,i) ) * mfexp(rec_dev_future(s,i)) ;     
-        get_future_Fs(i,iscen);
+        get_future_Fs(s,i,iscen);
         // Now graduate for the next year....
         nage_future(s,i+1)(2,nages) = ++elem_prod(nage_future(s,i)(1,nages-1),S_future(s,i)(1,nages-1));
         nage_future(s,i+1,nages)   += nage_future(s,i,nages)*S_future(s,i,nages);
         Sp_Biom_future(s,i) = wt_mature(s) * elem_prod(nage_future(s,i),pow(S_future(s,i),spmo_frac)) ;
       }
       nage_future(s,endyr_fut,1)  = SRecruit( Sp_Biom_future(s,endyr_fut-rec_age),cum_regs(s)+yy_sr(s,endyr_fut) ) * mfexp(rec_dev_future(s,endyr_fut)) ;     
-      get_future_Fs(endyr_fut,iscen);
+      get_future_Fs(s,endyr_fut,iscen);
       Sp_Biom_future(s,endyr_fut)  = wt_mature(s) * elem_prod(nage_future(s,endyr_fut),pow(S_future(s,endyr_fut),spmo_frac)) ;
       if (iscen==1)
       {
@@ -3948,7 +3949,11 @@ REPORT_SECTION
 
   report<<"Rec_estimated_in_styr_endyr: " <<styr_rec    <<" "<<endyr        <<" "<<endl;
   for (r=1;r<=nregs;r++)
-    report<<"SR_Curve_fit__in_styr_endyr_" <<r<<" : " <<styr_rec_est(r)<<" "<<endyr_rec_est(r)<<" "<<endl;
+  {
+    int istk = stk_reg_map(1,r);
+    int ireg = stk_reg_map(2,r);
+    report<<"SR_Curve_fit__in_styr_endyr_" <<r<<" : " <<styr_rec_est(istk,ireg)<<" "<<endyr_rec_est(istk,ireg)<<" "<<endl;
+  }
   report<<"Model_styr_endyr:            " <<styr        <<" "<<endyr        <<" "<<endl;
 
   report<<"M_prior,_CV,_phase "<< natmortprior<< " "<< cvnatmortprior<<" "<<phase_M<<endl;
@@ -5094,7 +5099,7 @@ FUNCTION Write_R
   char buffer [33];
   for (s=1;s<=nstk;s++)
   {
-    report_name = "For_R_"+ adstring(sprintf(buffer,"%d",s)) + ".rep";
+    report_name = "For_R_"+ adstring(itoa(s,buffer,10)) + ".rep";
     ofstream R_report(report_name);
     R_report<< "$repl_yld"<<endl<<repl_yld(s)<<endl; 
     R_report<< "$repl_SSB"<<endl<<repl_SSB(s)<<endl; 
@@ -5122,7 +5127,11 @@ FUNCTION Write_R
       R_report<<endl;
     R_report<<"$Yr"<<endl; for (i=styr;i<=endyr;i++) R_report<<i<<" "; R_report<<endl;
     for (r=1;r<=nreg(s);r++)
-      R_report<<"$P_age2len_"<<growth_map(s,r)<<endl; R_report<<P_age2len(growth_map(s,r))<<endl;
+    {
+      R_report<<"$P_age2len_"<<growth_map(s,r)<<endl;
+      for (j=1;j<=nages;j++)
+        R_report<<P_age2len(growth_map(s,r),j)<<endl;
+    }
     R_Report(len_bins);
     R_report<<"$TotF"<<endl << Ftot(s)<<endl;
     R_report<<"$TotBiom_NoFish"<<endl; for (i=styr;i<=endyr;i++) 
@@ -5822,7 +5831,8 @@ FUNCTION Write_R
     for (r=1;r<=nreg(s);r++)
     {
       R_report<<"$age2len_"<<growth_map(s,r)<<endl;
-      R_report<<P_age2len(growth_map(s,r))<<endl;
+      for (j=1;j<=nages;j++)
+        R_report<<P_age2len(growth_map(s,r),j)<<endl;
     }
     R_report<<"$msy_m0"<<endl; 
     sel_tmp.initialize();
