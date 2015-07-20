@@ -2125,7 +2125,7 @@ FUNCTION Get_Numbers_at_Age
   {
     for (r=2; r<=nreg(s); r++)
     {
-      Bzero(cum_regs(s)+r) = Sp_Biom(s)(reg_shift(s,r-1)-rec_age) ;  //reg_shift(s,i-1)-rec_age //(reg_shift(s,i-1)-nages)+1
+      Bzero(cum_regs(s)+r) = Sp_Biom(s,reg_shift(s,r-1)-rec_age) ;  //reg_shift(s,i-1)-rec_age //(reg_shift(s,i-1)-nages)+1
     }
   }
   for (r=1; r<=nregs; r++)
@@ -2201,7 +2201,7 @@ FUNCTION Get_Survey_Predictions
     iyr=yrs_ind(k,nyrs_ind(k));
     dvar_vector natagetmp = elem_prod(S(istk,endyr),natage(istk,endyr));
     natagetmp(2,nages) = ++natagetmp(1,nages-1)*1.;
-    natagetmp(1)       = SRecruit(Sp_Biom(istk,endyr+1-rec_age),yy_sr(istk,endyr+1));
+    natagetmp(1)       = SRecruit(Sp_Biom(istk,endyr+1-rec_age),cum_regs(istk)+yy_sr(istk,endyr+1));
     natagetmp(nages)  += natage(istk,endyr,nages)*S(istk,endyr,nages);
     // Assume same survival in 1st part of next year as same as first part of current
     pred_ind_nextyr(k) = q_ind(k,nyrs_ind(k)) * pow(elem_prod(natagetmp,pow(S(istk,endyr),ind_month_frac(k))) * 
@@ -5123,7 +5123,7 @@ FUNCTION Write_R
     R_report<<"$SurvNextYr"<<endl;
     for (k=1;k<=nind;k++)
       if (sel_map(1,k+nfsh) == s)
-        R_report<< pred_ind_nextyr <<" ";
+        R_report<< pred_ind_nextyr(k) <<" ";
       R_report<<endl;
     R_report<<"$Yr"<<endl; for (i=styr;i<=endyr;i++) R_report<<i<<" "; R_report<<endl;
     for (r=1;r<=nreg(s);r++)
