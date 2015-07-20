@@ -1268,11 +1268,11 @@ PARAMETER_SECTION
   // init_bounded_vector initage_dev(2,nages,-15,15,4)
   init_bounded_matrix rec_dev(1,nstk,styr_rec,endyr,-15,15,2)
   // init_matrix rec_dev(1,nstk,styr_rec,endyr,2)
-  init_number_vector log_sigmar(1,nregs,phase_sigmar);
+  init_number_vector log_sigmar(1,nrec,phase_sigmar);
   vector m_sigmarsq(1,nregs)
   vector m_sigmar(1,nregs)
   vector sigmarsq(1,nregs)
-  vector sigmar(1,nregs)
+  vector sigmar(1,nrec)
   vector alpha(1,nregs)
   vector beta(1,nregs)
   vector Bzero(1,nregs)
@@ -2422,8 +2422,13 @@ FUNCTION Rec_Like
   pred_rec.initialize();
   if (active(rec_dev))
   {
-    sigmar     =  mfexp(log_sigmar);
-    sigmarsq   =  square(sigmar);
+    sigmar = mfexp(log_sigmar);
+    for (r=1;r<=nregs;r++)
+    {
+      int istk    = stk_reg_map(1,r);
+      int ireg    = stk_reg_map(2,r);
+      sigmarsq(r) = square(sigmar(rec_map(istk,ireg)));
+    }
     if (current_phase()>2)
     {
       for (s=1;s<=nstk;s++)
@@ -2458,13 +2463,15 @@ FUNCTION Rec_Like
         for (r=1;r<=nregs;r++)
         {
           int istk = stk_reg_map(1,r);
-          rec_like(istk,1) += (SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(r); 
+          int ireg = stk_reg_map(2,r);
+          rec_like(istk,1) += (SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(rec_map(istk,ireg)); 
         }
       else
         for (r=1;r<=nregs;r++)
         {
           int istk = stk_reg_map(1,r);
-          rec_like(istk,1) += .1*((SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(r)); 
+          int ireg = stk_reg_map(2,r);
+          rec_like(istk,1) += .1*((SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(rec_map(istk,ireg))); 
         }
     }
 
@@ -2474,15 +2481,15 @@ FUNCTION Rec_Like
       {
         // Variance term for the parts not estimated by sr curve
         if ( styr_rec_est(s,1) > styr_rec )
-          rec_like(s,4) += .5*norm2( rec_dev(s)(styr_rec,styr_rec_est(s,1)-1) )/sigmarsq(cum_regs(s)+1) + ((styr_rec_est(s,1)-1)-styr_rec)*log(sigmar(cum_regs(s)+1)) ;
+          rec_like(s,4) += .5*norm2( rec_dev(s)(styr_rec,styr_rec_est(s,1)-1) )/sigmarsq(cum_regs(s)+1) + ((styr_rec_est(s,1)-1)-styr_rec)*log(sigmar(rec_map(s,1))) ;
         
         if ( endyr > endyr_rec_est(s,nreg(s)) )
-          rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,nreg(s))+1,endyr) )/sigmarsq(cum_regs(s)+nreg(s)) + (endyr-(endyr_rec_est(s,nreg(s))+1))*log(sigmar(cum_regs(s)+nreg(s))) ;
+          rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,nreg(s))+1,endyr) )/sigmarsq(cum_regs(s)+nreg(s)) + (endyr-(endyr_rec_est(s,nreg(s))+1))*log(sigmar(rec_map(s,nreg(s)))) ;
         
         for (r=2;r<=nreg(s);r++)
         {
           if ( (styr_rec_est(s,r)-1) > endyr_rec_est(s,r-1) )
-            rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,r-1)+1,styr_rec_est(s,r)-1) )/sigmarsq(cum_regs(s)+(r-1)) + ((styr_rec_est(s,r)-1)-(endyr_rec_est(s,r-1)+1))*log(sigmar(cum_regs(s)+(r-1))) ; // Ojo
+            rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,r-1)+1,styr_rec_est(s,r)-1) )/sigmarsq(cum_regs(s)+(r-1)) + ((styr_rec_est(s,r)-1)-(endyr_rec_est(s,r-1)+1))*log(sigmar(rec_map(s,r-1))) ; // Ojo
         }
         
         for (r=1;r<=nreg(s);r++)
@@ -2491,7 +2498,7 @@ FUNCTION Rec_Like
           for (j=1;j<=(nrecs_est_shift(iregs)-1);j++)
           {
             if ((yr_rec_est(iregs,j+1)-yr_rec_est(iregs,j)) > 1)
-              rec_like(s,4) += .5*norm2( rec_dev(s)(yr_rec_est(iregs,j)+1,yr_rec_est(iregs,j+1)-1) )/sigmarsq(iregs) + ((yr_rec_est(iregs,j+1)-1)-(yr_rec_est(iregs,j)+1))*log(sigmar(iregs)) ;
+              rec_like(s,4) += .5*norm2( rec_dev(s)(yr_rec_est(iregs,j)+1,yr_rec_est(iregs,j+1)-1) )/sigmarsq(iregs) + ((yr_rec_est(iregs,j+1)-1)-(yr_rec_est(iregs,j)+1))*log(sigmar(rec_map(s,r))) ;
           }
         }
       }
@@ -2518,7 +2525,7 @@ FUNCTION Rec_Like
       // Future recruitment variability (based on past)
       for (s=1;s<=nstk;s++)
       {
-        sigmar_fut(s)   = sigmar(cum_regs(s)+nreg(s)) ;
+        sigmar_fut(s)   = sigmar(rec_map(s,nreg(s))) ;
         rec_like(s,3) += norm2(rec_dev_future(s))/(2*square(sigmar_fut(s)))+ size_count(rec_dev_future(s))*log(sigmar_fut(s));
       }
     }
@@ -3617,7 +3624,7 @@ REPORT_SECTION
     {
       log_param(mean_log_rec(r));
     }
-    for (int r=1;r<=nregs;r++)
+    for (int r=1;r<=nrec;r++)
     {
       log_param(steepness(r));
     }
@@ -3627,7 +3634,7 @@ REPORT_SECTION
     }
     //log_param(log_Rzero);
     log_param(rec_dev);
-    for (int r=1;r<=nregs;r++)
+    for (int r=1;r<=nrec;r++)
     {
       log_param(log_sigmar(r));
     }
@@ -4467,7 +4474,7 @@ FUNCTION Write_SimDatafile
     sim_rec_devs.fill_randn(rng);
     for (s=1;s<=nstk;s++)
       for (i=styr_rec;i<=endyr;i++)
-        sim_rec_devs(s,i) *= value(sigmar(cum_regs(s)+yy_sr(s,i)));
+        sim_rec_devs(s,i) *= value(sigmar(rec_map(s,yy_sr(s,i))));
     for (s=1;s<=nstk;s++)
     {
       sim_natage(s,styr_rec,1) = value(Rzero(cum_regs(s)+1))*exp(sim_rec_devs(s,styr_rec));
@@ -5504,10 +5511,16 @@ FUNCTION Write_R
     R_report   << endl;
 
     R_report << setw(10)<< setfixed() << setprecision(5) <<endl;
-    R_report   << "$Rec_Pen" <<endl<<sigmar(cum_regs(s)+1,cum_regs(s)+nreg(s))<<"  "<<rec_like(s)<<endl;
+    R_report   << "$Rec_Pen" <<endl;
+    for (r=1;r<=nreg(s);r++)
+      R_report << sigmar(rec_map(s,r))<<"  ";
+    R_report<<rec_like(s)<<endl;
     R_report   << endl;
     R_report<< "$m_sigmar"<<endl<<m_sigmar(cum_regs(s)+1,cum_regs(s)+nreg(s))<<endl;
-    R_report<< "$sigmar"<<endl<<sigmar(cum_regs(s)+1,cum_regs(s)+nreg(s))<<endl;
+    R_report<< "$sigmar"<<endl;
+    for (r=1;r<=nreg(s);r++)
+      R_report << sigmar(rec_map(s,r))<<"  ";
+    R_report<<endl;
     R_report << endl<< "$rec_dev"<< endl;
     for (i=styr_rec;i<=endyr;i++)
       R_report << i<< " "<<rec_dev(s,i)<<endl;
