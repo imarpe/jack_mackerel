@@ -1,5 +1,9 @@
 mod1-ms.dat  
 Model_1-ms
+#	Number	of	stocks
+2
+#	Names	of	stocks
+South%North
 # Selectivity sharing vector (number_fisheries + number_surveys)  
 #Fsh 1 Fsh_2 Fsh_3 Fsh_4 Srv_1 Srv_2 Srv_3 Srv_4 Srv_5 Srv_6 Srv_7 Srv_8  
 #N_Chile_Fshry CS_Chile_Fishery Peruvian International Chile_AcousCS Chile_AcousN Chilean_CPUE DEPM Acoustic_Peru Peru_CPUE Chinese_CPUE EU_CPUE #  
@@ -255,6 +259,12 @@ Model_1-ms
 0 #0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 0.04 0.43 0.93 1 1 1 1 1 1 1 1 1  
 #---------------------------------------------------------
+#Population	Weight	at	Age	1000																																							
+0.051	0.0884	0.134	0.195	0.2612	0.328	0.4184	0.5344	0.6814	0.8426	1.0705	1.4589
+0.038	0.146	0.324	0.555	0.819	1.100	1.384	1.660	1.922	2.165	2.387	2.588
+#Maturity	at	Age	6	7	8	9	10	11	12																																		
+0.072426485	0.312168669	0.725119498	0.938773837	0.988903862	0.998073265	0.999667986	0.999942863	0.999990169	0.999998309	0.999999709	0.99999995
+0	0.37	0.98	1	1	1	1	1	1	1	1	1
 #Test  
 123456789  
 
