@@ -146,31 +146,6 @@ DATA_SECTION
   vector aa(1,nages);
   !! aa.fill_seqadd(rec_age,1) ;
   int junk;
-// Stock specifics
-  init_int nstk                                   //Number of stocks
-  imatrix pstkname(1,nstk,1,2)
-  init_adstring stknameread;
- LOCAL_CALCS
-  for(s=1;s<=nstk;s++) 
-  {
-    pstkname(s,1)=1; 
-    pstkname(s,2)=1;
-  }    // set whole array to equal 1 in case not enough names are read
-  adstring_array CRLF;   // blank to terminate lines
-  CRLF+="";
-  s=1;
-  for(i=1;i<=strlen(stknameread);i++)
-    if(adstring(stknameread(i))==adstring("%")) {
-      pstkname(s,2)=i-1; 
-      s++;  
-      pstkname(s,1)=i+1;
-    }
-  pstkname(nstk,2)=strlen(stknameread);
-  for(s=1;s<=nstk;s++)
-  {
-    stkname += stknameread(pstkname(s,1),pstkname(s,2))+CRLF(1);
-  }
- END_CALCS
 // Fishery specifics
   init_int nfsh                                   //Number of fisheries
   imatrix pfshname(1,nfsh,1,2)
@@ -181,7 +156,7 @@ DATA_SECTION
     pfshname(k,1)=1; 
     pfshname(k,2)=1;
   }    // set whole array to equal 1 in case not enough names are read
-  //adstring_array CRLF;   // blank to terminate lines
+  adstring_array CRLF;   // blank to terminate lines
   CRLF+="";
   k=1;
   for(i=1;i<=strlen(fshnameread);i++)
@@ -201,8 +176,6 @@ DATA_SECTION
   log_input(endyr);
   log_input(rec_age);
   log_input(oldest_age);
-  log_input(nstk);
-  log_input(stkname);
   log_input(nfsh);
   log_input(fshname);
  END_CALCS
@@ -307,14 +280,6 @@ DATA_SECTION
   vector age_vector(1,nages);
   !! for (j=1;j<=nages;j++)
   !!  age_vector(j) = double(j+rec_age-1);
-  init_matrix wt_pop(1,nstk,1,nages)
-  !! log_input(wt_pop);
-  init_matrix maturity(1,nstk,1,nages)
-  !! log_input(maturity);
-  // !! if (max(maturity)>.9) maturity /=2.;
-  matrix wt_mature(1,nstk,1,nages);
-  !! for (s=1;s<=nstk;s++)
-  !!  wt_mature(s) = elem_prod(wt_pop(s),maturity(s)) ;
 
   //Spawning month-----
   init_number spawnmo
@@ -336,6 +301,31 @@ DATA_SECTION
   *(ad_comm::global_datafile) >>  model_name; 
   log_input(cntrlfile_name);
  END_CALCS
+  // Stock specifics
+  init_int nstk                                   //Number of stocks
+  imatrix pstkname(1,nstk,1,2)
+  init_adstring stknameread;
+ LOCAL_CALCS
+  for(s=1;s<=nstk;s++) 
+  {
+    pstkname(s,1)=1; 
+    pstkname(s,2)=1;
+  }    // set whole array to equal 1 in case not enough names are read
+  // adstring_array CRLF;   // blank to terminate lines
+  CRLF+="";
+  s=1;
+  for(i=1;i<=strlen(stknameread);i++)
+    if(adstring(stknameread(i))==adstring("%")) {
+      pstkname(s,2)=i-1; 
+      s++;  
+      pstkname(s,1)=i+1;
+    }
+  pstkname(nstk,2)=strlen(stknameread);
+  for(s=1;s<=nstk;s++)
+  {
+    stkname += stknameread(pstkname(s,1),pstkname(s,2))+CRLF(1);
+  }
+ END_CALCS
   // Matrix of selectivity mappings--row 1 is index of stock
   //  row 2 is type (1=fishery, 2=index) and row 3 is index within that type
   //  e.g., the following for 2 fisheries and 4 indices means that index 3 uses fishery 1 selectivities,
@@ -346,6 +336,8 @@ DATA_SECTION
   // maps fisheries and indices into sequential sel_map for sharing purposes
   !! log_input(datafile_name);
   !! log_input(model_name);
+  !! log_input(nstk);
+  !! log_input(stkname);
   !! write_input_log<<"# Map shared selectivity: "<< endl;log_input(sel_map);
   !! projfile_name = cntrlfile_name(1,length(cntrlfile_name)-4) + ".prj";
 
@@ -906,6 +898,14 @@ DATA_SECTION
   }
   write_input_log<<"Phase indices Sel_Coffs: "<<phase_selcoff_ind<<endl; 
  END_CALCS
+  init_matrix wt_pop(1,nstk,1,nages)
+  !! log_input(wt_pop);
+  init_matrix maturity(1,nstk,1,nages)
+  !! log_input(maturity);
+  // !! if (max(maturity)>.9) maturity /=2.;
+  matrix wt_mature(1,nstk,1,nages);
+  !! for (s=1;s<=nstk;s++)
+  !!  wt_mature(s) = elem_prod(wt_pop(s),maturity(s)) ;
   init_number test;
   !! write_input_log<<" Test: "<<test<<endl;
  !! if (test!=123456789) {cerr<<"Control file not read in correctly... "<<endl;exit(1);}
