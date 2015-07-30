@@ -1568,7 +1568,11 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
 void model_parameters::preliminary_calculations(void)
 {
 
+#if defined(USE_ADPVM)
+
   admaster_slave_variable_interface(*this);
+
+#endif
   // Initialize age-specific changes in M if they are specified
   for (s=1;s<=nstk;s++)
   {
@@ -3672,7 +3676,7 @@ void model_parameters::write_mceval_hdr(void)
     " fut_catch_F35%_"<<styr_fut<<" "<<  endl;
 }
 
-void model_parameters::report()
+void model_parameters::report(const dvector& gradients)
 {
  adstring ad_tmp=initial_params::get_reportfile_name();
   ofstream report((char*)(adprogram_name + ad_tmp));
@@ -3896,7 +3900,7 @@ void model_parameters::report()
       dvariable stock;
       for (i=1;i<=300;i++)
       {
-        stock = double (i) * max(Bzero) /250.;
+        stock = double (i) * Bzero(r) /250.;
         if (active(log_Rzero(r)))
           report << stock <<" "<< SRecruit(stock, r)<<endl;
         else
@@ -5473,7 +5477,7 @@ void model_parameters::Write_R(void)
       dvariable stock;
       for (i=1;i<=300;i++)
       {
-        stock = double (i) * max(Bzero) /250.; //Bzero(cum_regs(s)+1,cum_regs(s)+nreg(s))
+        stock = double (i) * Bzero(r) /250.; //max(Bzero) //Bzero(cum_regs(s)+1,cum_regs(s)+nreg(s))
         if (active(log_Rzero(cum_regs(s)+r)))
           R_report << stock <<" "<< SRecruit(stock, cum_regs(s)+r)<<endl;
         else
