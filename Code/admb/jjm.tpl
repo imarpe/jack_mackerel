@@ -180,8 +180,10 @@ DATA_SECTION
   log_input(fshname);
  END_CALCS
   init_matrix catch_bio_in(1,nfsh,styr,endyr)
+  init_matrix catch_bio_sd_in(1,nfsh,styr,endyr)   // Specify catch-estimation precision
   // !! for (i=1;i<=nfsh;i++) catch_bio(i) += .01; 
   !! log_input(catch_bio_in);
+  !! log_input(catch_bio_sd_in);
 
 
 //  Define fishery age compositions
@@ -193,6 +195,8 @@ DATA_SECTION
   !! log_input(yrs_fsh_age_in);
   init_imatrix yrs_fsh_length_in(1,nfsh,1,nyrs_fsh_length)
   !! log_input(yrs_fsh_length_in);
+  init_matrix n_sample_fsh_age_in(1,nfsh,1,nyrs_fsh_age)    //Years of index index value (annual)
+  init_matrix n_sample_fsh_length_in(1,nfsh,1,nyrs_fsh_length)    //Years of index index value (annual)
   !! log_input(n_sample_fsh_length_in);
   init_3darray oac_fsh_in(1,nfsh,1,nyrs_fsh_age,1,nages)
   init_3darray olc_fsh_in(1,nfsh,1,nyrs_fsh_length,1,nlength)
@@ -233,6 +237,7 @@ DATA_SECTION
   init_imatrix yrs_ind_in(1,nind,1,nyrs_ind)         //Years of index value (annual)
   init_vector mo_ind(1,nind)                      //Month occur 
   init_matrix obs_ind_in(1,nind,1,nyrs_ind)          //values of index value (annual)
+  init_matrix obs_se_ind_in(1,nind,1,nyrs_ind)       //values of indices serrs
 
   vector ind_month_frac(1,nind)
   !! log_input(nyrs_ind);
@@ -240,6 +245,7 @@ DATA_SECTION
   !! log_input(mo_ind);
   !! ind_month_frac = (mo_ind-1.)/12.;
   !! log_input(obs_ind_in);
+  !! log_input(obs_se_ind_in);
   matrix        corr_dev(1,nind,1,nyrs_ind) //Index standard errors (for lognormal)
   matrix        corr_eff(1,nfsh,styr,endyr) //Index standard errors (for lognormal)
   matrix         act_eff(1,nfsh,styr,endyr) //Index standard errors (for lognormal)
@@ -256,6 +262,12 @@ DATA_SECTION
 
   init_imatrix yrs_ind_length_in(1,nind,1,nyrs_ind_length)
   !! log_input(yrs_ind_length_in);
+
+  init_matrix n_sample_ind_age_in(1,nind,1,nyrs_ind_age)         //Years of index value (annual)
+  !! log_input(yrs_ind_age_in);
+
+  init_matrix n_sample_ind_length_in(1,nind,1,nyrs_ind_length)         //Years of index lengths (annual)
+  !! log_input(n_sample_ind_length_in);
 
   init_3darray oac_ind_in(1,nind,1,nyrs_ind_age,1,nages);  //values of Index proportions at age
   init_3darray olc_ind_in(1,nind,1,nyrs_ind_length,1,nlength);
@@ -886,32 +898,14 @@ DATA_SECTION
   }
   write_input_log<<"Phase indices Sel_Coffs: "<<phase_selcoff_ind<<endl; 
  END_CALCS
-  init_matrix catch_bio_sd_in(1,nfsh,styr,endyr)   // Specify catch-estimation precision
-  !! log_input(catch_bio_sd_in);
-  
-  init_matrix n_sample_fsh_age_in(1,nfsh,1,nyrs_fsh_age)    //Years of index index value (annual)
-  init_matrix n_sample_fsh_length_in(1,nfsh,1,nyrs_fsh_length)    //Years of index index value (annual)
-  
-  init_matrix obs_se_ind_in(1,nind,1,nyrs_ind)       //values of indices serrs
-  !! obs_se_ind_in = elem_prod(obs_ind_in,obs_se_ind_in);
-  !! log_input(obs_se_ind_in);
-  
-  init_matrix n_sample_ind_age_in(1,nind,1,nyrs_ind_age)         //Years of index value (annual)
-  !! log_input(yrs_ind_age_in);
-
-  init_matrix n_sample_ind_length_in(1,nind,1,nyrs_ind_length)         //Years of index lengths (annual)
-  !! log_input(n_sample_ind_length_in);
-  
   init_matrix wt_pop(1,nstk,1,nages)
   !! log_input(wt_pop);
-  
   init_matrix maturity(1,nstk,1,nages)
   !! log_input(maturity);
   // !! if (max(maturity)>.9) maturity /=2.;
   matrix wt_mature(1,nstk,1,nages);
   !! for (s=1;s<=nstk;s++)
   !!  wt_mature(s) = elem_prod(wt_pop(s),maturity(s)) ;
-  
   init_number test;
   !! write_input_log<<" Test: "<<test<<endl;
  !! if (test!=123456789) {cerr<<"Control file not read in correctly... "<<endl;exit(1);}
