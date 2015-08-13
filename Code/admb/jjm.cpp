@@ -4503,7 +4503,6 @@ void model_parameters::Write_SimDatafile(void)
   int nsims;
   // get the number of simulated datasets to create...
   ifstream sim_in("nsims.dat"); sim_in >> nsims; sim_in.close();
-  char buffer [33];
   ofstream SimDB("simout.dat",ios::app); 
   ofstream TruDB("truout.dat",ios::app); 
   // compute the autocorrelation term for residuals of fit to indices...
@@ -4584,8 +4583,8 @@ void model_parameters::Write_SimDatafile(void)
     //Now write from simulated population
     //
     // Create the name of the simulated dataset
-    simname = "sim_"+ adstring(sprintf(buffer,"%d",isim)) + ".dat";
-    truname = "tru_"+ adstring(sprintf(buffer,"%d",isim)) + ".dat";
+    simname = "sim_"+ str(isim) + ".dat";
+    truname = "tru_"+ str(isim) + ".dat";
     ofstream trudat(truname);
     truth(Rzero);
     truth(Fmsy);
@@ -4930,14 +4929,13 @@ void model_parameters::Write_Datafile(void)
   int nsims;
   // get the number of simulated datasets to create...
   ifstream sim_in("nsims.dat"); sim_in >> nsims; sim_in.close();
-  char buffer [33];
   // compute the autocorrelation term for residuals of fit to indices...
   for (k=1;k<=nind;k++)
     ac(k) = get_AC(k);
   for (int isim=1;isim<=nsims;isim++)
   {
     // Create the name of the simulated dataset
-    simname = "sim_"+ adstring(sprintf(buffer,"%d",isim)) + ".dat";
+    simname = "sim_"+ str(isim) + ".dat";
     // Open the simulated dataset for writing
     ofstream simdat(simname);
     simdat << "# first year" <<endl;
@@ -5162,10 +5160,9 @@ void model_parameters::Write_R(void)
   ofstream& mceval= *pad_mceval;
   random_number_generator& rng= *pad_rng;
   adstring report_name;
-  char buffer [33];
   for (s=1;s<=nstk;s++)
   {
-    report_name = "For_R_"+ adstring(itoa(s,buffer,10)) + ".rep";
+    report_name = "For_R_"+ str(s) + ".rep";
     ofstream R_report(report_name);
     R_report<< "$repl_yld"<<endl<<repl_yld(s)<<endl; 
     R_report<< "$repl_SSB"<<endl<<repl_SSB(s)<<endl; 
