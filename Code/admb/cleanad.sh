@@ -1,0 +1,39 @@
+#!/bin/bash -v
+echo "cleaning admb files"
+rm varssave.*
+rm cmpdiff.*
+rm tmp_admb
+rm gradfil2.*
+rm *.tmp
+rm *~ 
+rm *.dep
+rm *.log
+rm *.obj
+rm *.o
+### rm *.cpp
+rm *.par
+rm *.rep
+rm *.std
+rm *.prj
+rm *.yld
+rm jjm.bar
+rm jjm.cor
+rm mceval.dat
+rm proj.dat
+rm *.htp
+rm *.0? 
+rm *.r1?
+rm *.p1? 
+rm *.b1? 
+rm *.r0? 
+rm *.p0? 
+rm *.b0? 
+rm *.hes 
+rm variance
+rm *.cov 
+rm *.rpt 
+### rm *.cor 
+rm *.eva 
+rm *.td2 
+rm *.tds 
+rm *.tr2 
