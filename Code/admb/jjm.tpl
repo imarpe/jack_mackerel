@@ -5436,7 +5436,7 @@ FUNCTION Write_R
       dvariable stock;
       for (i=1;i<=300;i++)
       {
-        stock = double (i) * Bzero(r) /250.; //max(Bzero) //Bzero(cum_regs(s)+1,cum_regs(s)+nreg(s))
+        stock = double (i) * Bzero(cum_regs(s)+r) /250.; //max(Bzero) //Bzero(cum_regs(s)+1,cum_regs(s)+nreg(s))
         if (active(log_Rzero(cum_regs(s)+r)))
           R_report << stock <<" "<< SRecruit(stock, cum_regs(s)+r)<<endl;
         else
