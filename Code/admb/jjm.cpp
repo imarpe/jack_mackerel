@@ -1288,7 +1288,7 @@ model_parameters::model_parameters(int sz,int argc,char * argv[]) :
   logsel_slope_ind.allocate(1,nind,1,n_sel_ch_ind,phase_logist_ind+1,"logsel_slope_ind");
   sel50_ind.allocate(1,nind,1,n_sel_ch_ind,1,20,phase_logist_ind,"sel50_ind");
   logsel_dslope_ind.allocate(1,nind,1,n_sel_ch_ind,phase_dlogist_ind,"logsel_dslope_ind");
-  seld50_ind.allocate(1,nfsh,1,n_sel_ch_ind,lb_d50,nages,phase_dlogist_ind,"seld50_ind");
+  seld50_ind.allocate(1,nind,1,n_sel_ch_ind,lb_d50,nages,phase_dlogist_ind,"seld50_ind");
   sel_slope_ind.allocate(1,nind,1,n_sel_ch_ind,"sel_slope_ind");
   #ifndef NO_AD_INITIALIZE
     sel_slope_ind.initialize();
@@ -3911,7 +3911,7 @@ void model_parameters::report(const dvector& gradients)
     report   << "----------------------------------------- " <<endl;
     report   << "  catch_like age_like_fsh length_like_fsh sel_like_fsh ind_like age_like_ind length_like_ind sel_like_ind rec_like fpen post_priors_indq post_priors residual total"<<endl;
     report   << " "<<obj_comps<<endl;
-    obj_comps(13)= obj_fun - sum(obj_comps) ; // Residual 
+    obj_comps(13)= obj_fun - sum(obj_comps(1,12)) ; // Residual 
     obj_comps(14)= obj_fun ;                  // Total
     report   <<"  catch_like       "<<setw(10)<<obj_comps(1) <<endl
              <<"  age_like_fsh     "<<setw(10)<<obj_comps(2) <<endl
@@ -5483,7 +5483,7 @@ void model_parameters::Write_R(void)
     }
     R_report   << endl;
     R_report   << endl<<"$Like_Comp" <<endl;
-    obj_comps(13)= obj_fun - sum(obj_comps) ; // Residual 
+    obj_comps(13)= obj_fun - sum(obj_comps(1,12)) ; // Residual 
     obj_comps(14)= obj_fun ;                  // Total
     R_report   <<obj_comps<<endl;
     R_report   << endl;

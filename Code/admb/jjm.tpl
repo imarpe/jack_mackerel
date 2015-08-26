@@ -1369,7 +1369,7 @@ PARAMETER_SECTION
   init_bounded_vector_vector        sel50_ind(1,nind,1,n_sel_ch_ind,1,20,phase_logist_ind)
 
   init_vector_vector  logsel_dslope_ind(1,nind,1,n_sel_ch_ind,phase_dlogist_ind) // Need to make positive or reparameterize
-  init_bounded_vector_vector seld50_ind(1,nfsh,1,n_sel_ch_ind,lb_d50,nages,phase_dlogist_ind)
+  init_bounded_vector_vector seld50_ind(1,nind,1,n_sel_ch_ind,lb_d50,nages,phase_dlogist_ind)
 
   matrix                sel_slope_ind(1,nind,1,n_sel_ch_ind)
   matrix                sel_dslope_ind(1,nind,1,n_sel_ch_ind)
@@ -3826,7 +3826,7 @@ REPORT_SECTION
     report   << "  catch_like age_like_fsh length_like_fsh sel_like_fsh ind_like age_like_ind length_like_ind sel_like_ind rec_like fpen post_priors_indq post_priors residual total"<<endl;
     report   << " "<<obj_comps<<endl;
 
-    obj_comps(13)= obj_fun - sum(obj_comps) ; // Residual 
+    obj_comps(13)= obj_fun - sum(obj_comps(1,12)) ; // Residual 
     obj_comps(14)= obj_fun ;                  // Total
     report   <<"  catch_like       "<<setw(10)<<obj_comps(1) <<endl
              <<"  age_like_fsh     "<<setw(10)<<obj_comps(2) <<endl
@@ -5447,7 +5447,7 @@ FUNCTION Write_R
     R_report   << endl;
 
     R_report   << endl<<"$Like_Comp" <<endl;
-    obj_comps(13)= obj_fun - sum(obj_comps) ; // Residual 
+    obj_comps(13)= obj_fun - sum(obj_comps(1,12)) ; // Residual 
     obj_comps(14)= obj_fun ;                  // Total
     R_report   <<obj_comps<<endl;
     R_report   << endl;
