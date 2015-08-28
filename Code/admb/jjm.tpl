@@ -2471,7 +2471,7 @@ FUNCTION Rec_Like
         {
           int istk = stk_reg_map(1,r);
           int ireg = stk_reg_map(2,r);
-          rec_like(istk,1) += .1*((SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(rec_map(istk,ireg))); 
+          rec_like(istk,1) += .1*(SSQRec(r)+ m_sigmarsq(r)/2.)/(2*sigmarsq(r)) + nrecs_est_shift(r)*log_sigmar(rec_map(istk,ireg)); 
         }
     }
 
@@ -2481,15 +2481,16 @@ FUNCTION Rec_Like
       {
         // Variance term for the parts not estimated by sr curve
         if ( styr_rec_est(s,1) > styr_rec )
-          rec_like(s,4) += .5*norm2( rec_dev(s)(styr_rec,styr_rec_est(s,1)-1) )/sigmarsq(cum_regs(s)+1) + ((styr_rec_est(s,1)-1)-styr_rec)*log(sigmar(rec_map(s,1))) ;
+          rec_like(s,4) += .5*norm2( rec_dev(s)(styr_rec,styr_rec_est(s,1)-1) )/sigmarsq(cum_regs(s)+1) + (styr_rec_est(s,1)-styr_rec)*log(sigmar(rec_map(s,1))) ;
         
         if ( endyr > endyr_rec_est(s,nreg(s)) )
-          rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,nreg(s))+1,endyr) )/sigmarsq(cum_regs(s)+nreg(s)) + (endyr-(endyr_rec_est(s,nreg(s))+1))*log(sigmar(rec_map(s,nreg(s)))) ;
+          rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,nreg(s))+1,endyr) )/sigmarsq(cum_regs(s)+nreg(s)) + (endyr-endyr_rec_est(s,nreg(s)))*log(sigmar(rec_map(s,nreg(s)))) ;
         
         for (r=2;r<=nreg(s);r++)
         {
           if ( (styr_rec_est(s,r)-1) > endyr_rec_est(s,r-1) )
-            rec_like(s,4) += .5*norm2( rec_dev(s)(endyr_rec_est(s,r-1)+1,styr_rec_est(s,r)-1) )/sigmarsq(cum_regs(s)+(r-1)) + ((styr_rec_est(s,r)-1)-(endyr_rec_est(s,r-1)+1))*log(sigmar(rec_map(s,r-1))) ; // Ojo
+            for (i=(endyr_rec_est(s,r-1)+1);i<=(styr_rec_est(s,r)-1);i++)
+              rec_like(s,4) += .5*square( rec_dev(s,i) )/sigmarsq(cum_regs(s)+yy_sr(s,i)) + log(sigmar(rec_map(s,yy_sr(s,i)))) ;
         }
         
         for (r=1;r<=nreg(s);r++)
@@ -2498,7 +2499,7 @@ FUNCTION Rec_Like
           for (j=1;j<=(nrecs_est_shift(iregs)-1);j++)
           {
             if ((yr_rec_est(iregs,j+1)-yr_rec_est(iregs,j)) > 1)
-              rec_like(s,4) += .5*norm2( rec_dev(s)(yr_rec_est(iregs,j)+1,yr_rec_est(iregs,j+1)-1) )/sigmarsq(iregs) + ((yr_rec_est(iregs,j+1)-1)-(yr_rec_est(iregs,j)+1))*log(sigmar(rec_map(s,r))) ;
+              rec_like(s,4) += .5*norm2( rec_dev(s)(yr_rec_est(iregs,j)+1,yr_rec_est(iregs,j+1)-1) )/sigmarsq(iregs) + (yr_rec_est(iregs,j+1)-yr_rec_est(iregs,j)-1)*log(sigmar(rec_map(s,r))) ;
           }
         }
       }
